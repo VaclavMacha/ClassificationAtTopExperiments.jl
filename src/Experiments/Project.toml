@@ -5,6 +5,7 @@ version = "0.1.0"
 
 [deps]
 AccuracyAtTopPrimal = "fe3dcc9b-297f-427f-9453-e9e3c6e3e222"
+BSON = "fbb218c0-5317-5bc6-957e-2ee96dd4b1f0"
 Configurations = "5218b696-f38b-4ac9-8b61-a12ec717816d"
 DrWatson = "634d3b9d-ee7a-5ddf-bec9-22491ea816e1"
 Flux = "587475ba-b771-5e3f-ad9e-33799f191a9c"
