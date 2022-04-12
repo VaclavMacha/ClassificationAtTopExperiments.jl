@@ -19,6 +19,9 @@ export load
 export materialize
 export loss
 
+# abstract types
+abstract type Objective end
+
 include("datasets.jl")
 include("objectives.jl")
 include("models.jl")
