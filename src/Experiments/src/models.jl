@@ -3,7 +3,7 @@
     pretrained = false
 end
 
-materialize(m::Model) = materialize(Val(m.type), m)
+materialize(m::Model; kwargs...) = materialize(Val(m.type), m; kwargs...)
 
 function materialize(::Val{:Linear}, m::Model; device=identity)
     if m.pretrained
@@ -13,6 +13,6 @@ function materialize(::Val{:Linear}, m::Model; device=identity)
         model = Dense(22510, 1) |> device
     end
     pars = Flux.params(model)
-    delete!(pars, model.b)
+    delete!(pars, model.bias)
     return model, pars
 end
