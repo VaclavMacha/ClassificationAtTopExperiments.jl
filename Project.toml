@@ -3,6 +3,7 @@ name = "SteganographyExperiments.jl"
 [deps]
 AccuracyAtTopPrimal = "fe3dcc9b-297f-427f-9453-e9e3c6e3e222"
 DrWatson = "634d3b9d-ee7a-5ddf-bec9-22491ea816e1"
+Experiments = "0ed54c3c-39b1-4574-89de-30629e1c012c"
 
 [compat]
 DrWatson = "2.7.5"
