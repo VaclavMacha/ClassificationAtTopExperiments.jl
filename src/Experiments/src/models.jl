@@ -1,16 +1,18 @@
 @option "model" struct Model
-    type::String = "Linear"
+    type::Symbol = :Linear
     pretrained = false
 end
 
-materialize(m::Model) = materialize(Val(Symbol(m.type)), m)
+materialize(m::Model) = materialize(Val(m.type), m)
 
-function materialize(::Val{:Linear}, m::Model)
+function materialize(::Val{:Linear}, m::Model; device=identity)
     if m.pretrained
         error("pretrained model not available")
-        return
     else
         @info "Generating new network"
-        return Dense(22510, 1)
+        model = Dense(22510, 1) |> device
     end
+    pars = Flux.params(model)
+    delete!(pars, model.b)
+    return model, pars
 end
