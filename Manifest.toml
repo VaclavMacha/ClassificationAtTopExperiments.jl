@@ -201,7 +201,7 @@ uuid = "634d3b9d-ee7a-5ddf-bec9-22491ea816e1"
 version = "2.9.1"
 
 [[deps.Experiments]]
-deps = ["AccuracyAtTopPrimal", "Configurations", "Flux", "HDF5", "Random"]
+deps = ["AccuracyAtTopPrimal", "Configurations", "DrWatson", "Flux", "HDF5", "Random", "Statistics"]
 path = "src/Experiments"
 uuid = "0ed54c3c-39b1-4574-89de-30629e1c012c"
 version = "0.1.0"
