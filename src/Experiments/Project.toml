@@ -1,0 +1,11 @@
+name = "Experiments"
+uuid = "0ed54c3c-39b1-4574-89de-30629e1c012c"
+authors = ["machava2 "]
+version = "0.1.0"
+
+[deps]
+AccuracyAtTopPrimal = "fe3dcc9b-297f-427f-9453-e9e3c6e3e222"
+Configurations = "5218b696-f38b-4ac9-8b61-a12ec717816d"
+Flux = "587475ba-b771-5e3f-ad9e-33799f191a9c"
+HDF5 = "f67ccb44-e63f-5c2f-98bd-6dc0ccc4ba2f"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"

@@ -1,6 +1,9 @@
 name = "SteganographyExperiments.jl"
-[compat]
-julia = "1.7.0"
-DrWatson = "2.7.5"
+
 [deps]
+AccuracyAtTopPrimal = "fe3dcc9b-297f-427f-9453-e9e3c6e3e222"
 DrWatson = "634d3b9d-ee7a-5ddf-bec9-22491ea816e1"
+
+[compat]
+DrWatson = "2.7.5"
+julia = "1.7.0"
