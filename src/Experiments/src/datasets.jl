@@ -33,6 +33,7 @@ function split_in_half(x, ratio)
     return inds[1:k÷2], inds[(k÷2+1):k]
 end
 
+get_path(d::DataConfig) = get_path(d.dataset)
 get_path(::Nsf5_01) = datadir("dataset", "nsf5_0.1_jrm.h5")
 get_path(::Nsf5_02) = datadir("dataset", "nsf5_0.2_jrm.h5")
 get_path(::Nsf5_05) = datadir("dataset", "nsf5_0.5_jrm.h5")
@@ -42,7 +43,7 @@ function load(d::D) where {D<:DataConfig}
     x_stego = load_hdf5(get_path(d))
 
     i1_train, i1_test = split_in_half(x_cover, 1)
-    i2_train, i2_test = split_in_half(x_stego, d.ratio)
+    i2_train, i2_test = split_in_half(x_stego, d.dataset.ratio)
 
     xtrain = hcat(x_cover[:, i1_train], x_stego[:, i2_train])
     ytrain = reshape(1:size(xtrain, 2) .> length(i1_train), 1, :)
