@@ -89,8 +89,6 @@ function run_experiments(
     # run
     with_logger(logger) do
         @info "Preparing output dir..."
-        mkpath(datadir(dir))
-        mkpath(datadir(dir, "checkpoints"))
         save_config(
             datadir(dir, "config.yaml"),
             make_dict(Lconfig, Mconfig, Dconfig, Oconfig, Tconfig)
@@ -104,7 +102,7 @@ function run_experiments(
         optimiser = materialize(Oconfig)
 
         solution = []
-        progress!(p)
+        progress!(p; training=false)
 
         # training loop
         @info "Training in progress..."
