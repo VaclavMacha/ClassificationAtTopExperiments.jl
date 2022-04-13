@@ -36,7 +36,8 @@ export OptConfig
 export TrainConfig
 
 export run_experiments
-export save_config, load_config, parse_config
+export make_dict, save_config, load_config, parse_config
+export load_model, save_model
 
 # includes
 include("datasets.jl")
