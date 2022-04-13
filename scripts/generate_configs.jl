@@ -32,12 +32,13 @@ Oconfigs = [
     OptConfig(type="ADAM", eta=1e-4),
 ]
 Mconfig = ModelConfig(Linear())
-Tconfig = TrainConfig()
+Tconfig = TrainConfig(iters = 1000, checkpoint_every = 100)
 
 i = 0
 for Dconfig in Dconfigs, Lconfig in Lconfigs, Oconfig in Oconfigs
     i += 1
     d = make_dict(Lconfig, Mconfig, Dconfig, Oconfig, Tconfig)
     path = configsdir("config_$(lpad(i, 4, "0")).yaml")
+    mkpath(dirname(path))
     save_config(path, d)
 end
