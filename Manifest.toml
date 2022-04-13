@@ -260,7 +260,7 @@ uuid = "2e619515-83b5-522b-bb60-26c02a35a201"
 version = "2.4.8+0"
 
 [[deps.Experiments]]
-deps = ["AccuracyAtTopPrimal", "BSON", "Configurations", "DrWatson", "EvalMetrics", "Flux", "HDF5", "Logging", "LoggingExtras", "Plots", "ProgressMeter", "Random", "Statistics", "YAML"]
+deps = ["AccuracyAtTopPrimal", "BSON", "Configurations", "Dates", "DrWatson", "EvalMetrics", "Flux", "HDF5", "Logging", "LoggingExtras", "Plots", "ProgressMeter", "Random", "Statistics", "YAML"]
 path = "src/Experiments"
 uuid = "0ed54c3c-39b1-4574-89de-30629e1c012c"
 version = "0.1.0"
