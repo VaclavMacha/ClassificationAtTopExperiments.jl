@@ -16,5 +16,5 @@ sbatch_array(
     configs_dir();
     logdir=log_dir(),
     partition="cpu",
-    mem="100G"
+    mem="200G"
 ) |> run
