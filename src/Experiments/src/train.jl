@@ -79,60 +79,70 @@ function run_experiments(
     if !Tconfig.force && isfile(datadir(dir, "solution.bson"))
         return load_model(datadir(dir, "solution.bson"))
     end
-    mkpath(datadir(dir))
-    mkpath(datadir(dir, "checkpoints"))
 
-    # sace configuration
-    cdictr = make_dict(Lconfig, Mconfig, Dconfig, Oconfig, Tconfig)
-    save_config(datadir(dir, "config.yaml"), cdictr)
+    # logging initialization
+    p = Progress(; iter_max = Tconfig.iters)
+    logger = generate_logger(dir)
 
-    # initialization
-    @info "Experiment in progress..."
-    device = materialize(Tconfig.device)
-    train, test = load(Dconfig) |> device
-    model, pars = materialize(Mconfig; device)
-    optimiser = materialize(Oconfig)
+    # run
+    with_logger(logger) do
+        @info "Preparing output dir..."
+        mkpath(datadir(dir))
+        mkpath(datadir(dir, "checkpoints"))
+        save_config(
+            datadir(dir, "config.yaml"),
+            make_dict(Lconfig, Mconfig, Dconfig, Oconfig, Tconfig)
+        )
 
-    solution = []
-    loss_train = Float32[]
-    loss_test = Float32[]
+        # initialization
+        @info "Experiment in progress..."
+        device = materialize(Tconfig.device)
+        train, test = load(Dconfig) |> device
+        model, pars = materialize(Mconfig; device)
+        optimiser = materialize(Oconfig)
 
-    # training loop
-    @info "Training in progress..."
-    for iter in 1:Tconfig.iters
-        if Oconfig.decay_step != 1 && mod(iter, Oconfig.decay_every) == 0
-            optimiser.eta = max(optimiser.eta * Oconfig.decay_step, Oconfig.decay_min)
+        solution = []
+        progress!(p)
+
+        # training loop
+        @info "Training in progress..."
+        for iter in 1:Tconfig.iters
+            if Oconfig.decay_step != 1 && mod(iter, Oconfig.decay_every) == 0
+                optimiser.eta = max(optimiser.eta * Oconfig.decay_step, Oconfig.decay_min)
+            end
+
+            # gradient step
+            local L_train
+            local s_train
+            grads = Flux.Zygote.gradient(pars) do
+                s_train = model(train[1])
+                L_train = loss(Lconfig, train[2], s_train, pars)
+                return L_train
+            end
+            Flux.Optimise.update!(optimiser, pars, grads)
+            append!(p.loss_train, L_train)
+
+            # checkpoint
+            if mod(iter, Tconfig.checkpoint_every) == 0 || iter == Tconfig.iters
+                s_test = model(test[1])
+                append!(p.loss_test, loss(Lconfig, test[2], s_test, pars))
+
+                solution = Dict(
+                    :iter => iter,
+                    :model => deepcopy(cpu(model)),
+                    :train => Dict(:y => train[2], :s => cpu(s_train)),
+                    :test => Dict(:y => test[2], :s => cpu(s_test)),
+                    :loss_train => p.loss_train,
+                    :loss_test => p.loss_test,
+                )
+                save_model(datadir(dir, "checkpoints", "solution_iter=$(iter).bson"), solution)
+            end
+            progress!(p)
         end
-
-        # gradient step
-        local L_train
-        local s_train
-        grads = Flux.Zygote.gradient(pars) do
-            s_train = model(train[1])
-            L_train = loss(Lconfig, train[2], s_train, pars)
-            return L_train
+        @info "Saving final solution..."
+        if !isempty(solution)
+            save_model(datadir(dir, "solution.bson"), solution)
         end
-        Flux.Optimise.update!(optimiser, pars, grads)
-        append!(loss_train, L_train)
-
-        # checkpoint
-        if mod(iter, Tconfig.checkpoint_every) == 0 || iter == Tconfig.iters
-            s_test = model(test[1])
-            append!(loss_test, loss(Lconfig, test[2], s_test, pars))
-
-            solution = Dict(
-                :iter => iter,
-                :model => deepcopy(cpu(model)),
-                :train => Dict(:y => train[2], :s => cpu(s_train)),
-                :test => Dict(:y => test[2], :s => cpu(s_test)),
-                :loss_train => loss_train,
-                :loss_test => loss_test,
-            )
-            save_model(datadir(dir, "checkpoints", "solution_iter=$(iter).bson"), solution)
-        end
-    end
-    if !isempty(solution)
-        save_model(datadir(dir, "solution.bson"), solution)
     end
     return solution
 end

@@ -4,13 +4,18 @@ using AccuracyAtTopPrimal
 using BSON
 using Configurations
 using DrWatson
+using EvalMetrics
 using Flux
 using HDF5
+using Logging
+using LoggingExtras
+using Plots
 using Random
 using Statistics
 using YAML
 
 using Flux.Losses: logitbinarycrossentropy
+using ProgressMeter: durationstring, speedstring
 
 # exports
 export DataConfig
@@ -37,6 +42,7 @@ include("datasets.jl")
 include("losses.jl")
 include("models.jl")
 include("optimisers.jl")
+include("logging.jl")
 include("train.jl")
 
 end # module
