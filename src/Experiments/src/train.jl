@@ -1,5 +1,5 @@
-@option "Cpu" struct CPU end
-@option "Gpu" struct GPU end
+@option "CPU" struct CPU end
+@option "GPU" struct GPU end
 
 materialize(::CPU) = Flux.cpu
 materialize(::GPU) = Flux.cpu
