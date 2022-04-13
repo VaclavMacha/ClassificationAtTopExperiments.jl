@@ -34,7 +34,7 @@ function log_progress!(io, p::Progress)
         write(io, "Training finished:  \n")
     else
         perc = round(Int, 100 * iter / iter_max)
-        write(io, "Training in progress: $(iter)/$(iter_max) ($(perc))%) \n")
+        write(io, "Training in progress: $(iter)/$(iter_max) ($(perc))% \n")
     end
     return
 end
