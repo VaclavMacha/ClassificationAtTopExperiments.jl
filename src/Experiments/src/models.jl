@@ -1,11 +1,10 @@
-@option "model" struct Model
-    type::Symbol = :Linear
+abstract type ModelType end
+
+@option "Linear" struct Linear <: ModelType
     pretrained = false
 end
 
-materialize(m::Model; kwargs...) = materialize(Val(m.type), m; kwargs...)
-
-function materialize(::Val{:Linear}, m::Model; device=identity)
+function materialize(m::Linear; device=identity)
     if m.pretrained
         error("pretrained model not available")
     else
@@ -15,4 +14,8 @@ function materialize(::Val{:Linear}, m::Model; device=identity)
     pars = Flux.params(model)
     delete!(pars, model.bias)
     return model, pars
+end
+
+@option struct ModelConfig
+    model::Union{Linear}
 end
