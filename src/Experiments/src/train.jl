@@ -14,15 +14,16 @@ end
 
 # Save directory
 function dir_name(
-    lconfig::LossConfig,
-    mconfig::ModelConfig,
-    dconfig::DataConfig,
-    oconfig::OptConfig,
-    tconfig::TrainConfig,
+    Lconfig::LossConfig,
+    Mconfig::ModelConfig,
+    Dconfig::DataConfig,
+    Oconfig::OptConfig,
+    Tconfig::TrainConfig,
 )
 
     return joinpath(
-        string.([tconfig, dconfig, mconfig, lconfig, oconfig])...,
+        "results",
+        string.([Tconfig, Dconfig, Mconfig, Oconfig, Lconfig])...,
     )
 end
 
