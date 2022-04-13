@@ -1,22 +1,28 @@
-@option "training" struct Training
+@option "Cpu" struct CPU end
+@option "Gpu" struct GPU end
+
+materialize(::CPU) = Flux.cpu
+materialize(::GPU) = Flux.cpu
+
+@option struct TrainConfig
     seed::Int = 1234
     force::Bool = false
-    device::Function = cpu
     iters::Int = 100
     checkpoint_every::Int = 5
+    device::Union{CPU,GPU} = CPU()
 end
 
 # Save directory
 function dir_name(
-    loss_config::O,
-    model_config::Model,
-    data_config::Dataset,
-    opt_config::Optimiser,
-    config::Training,
-) where {O<:Objective}
+    lconfig::LossConfig,
+    mconfig::ModelConfig,
+    dconfig::DataConfig,
+    oconfig::OptConfig,
+    tconfig::TrainConfig,
+)
 
     return joinpath(
-        string.([config, data_config, model_config, loss_config, opt_config])...,
+        string.([tconfig, dconfig, mconfig, lconfig, oconfig])...,
     )
 end
 
@@ -25,27 +31,67 @@ load_model(path) = BSON.load(path, @__MODULE__)
 save_model(path, model) = BSON.bson(path, model)
 
 # experiment
+function make_dict(
+    Lconfig::LossConfig,
+    Mconfig::ModelConfig,
+    Dconfig::DataConfig,
+    Oconfig::OptConfig,
+    Tconfig::TrainConfig,
+)
+
+    d = merge(
+        to_dict(Lconfig, YAMLStyle),
+        to_dict(Mconfig, YAMLStyle),
+        to_dict(Dconfig, YAMLStyle),
+    )
+    d["optimiser"] = to_dict(Oconfig, YAMLStyle)
+    d["training"] = to_dict(Tconfig, YAMLStyle)
+
+    return d
+end
+
+save_config(path, config) = YAML.write_file(path, config)
+load_config(path) = YAML.load_file(path; dicttype=Dict{String,Any})
+
+function parse_config(path)
+    d = load_config(path)
+    return (
+        from_dict(LossConfig, Dict("loss" => d["loss"])),
+        from_dict(ModelConfig, Dict("model" => d["model"])),
+        from_dict(DataConfig, Dict("dataset" => d["dataset"])),
+        from_dict(OptConfig, d["optimiser"]),
+        from_dict(TrainConfig, d["training"]),
+    )
+end
+
+run_experiments(path) = run_experiments(parse_config(path)...)
+
 function run_experiments(
-    loss_config::O,
-    model_config::Model,
-    data_config::Dataset,
-    opt_config::Optimiser,
-    config::Training,
-) where {O<:Objective}
+    Lconfig::LossConfig,
+    Mconfig::ModelConfig,
+    Dconfig::DataConfig,
+    Oconfig::OptConfig,
+    Tconfig::TrainConfig,
+)
 
     # check if exists
-    dir = dir_name(loss_config, model_config, data_config, opt_config, config)
-    if !config.force && isfile(datadir(dir, "solution.bson"))
+    dir = dir_name(Lconfig, Mconfig, Dconfig, Oconfig, Tconfig)
+    if !Tconfig.force && isfile(datadir(dir, "solution.bson"))
         return load_model(datadir(dir, "solution.bson"))
     end
     mkpath(datadir(dir))
     mkpath(datadir(dir, "checkpoints"))
 
+    # sace configuration
+    cdictr = make_dict(Lconfig, Mconfig, Dconfig, Oconfig, Tconfig)
+    save_config(datadir(dir, "config.yaml"), cdictr)
+
     # initialization
     @info "Experiment in progress..."
-    train, test = load(data_config) |> config.device
-    model, pars = materialize(model_config; device=config.device)
-    optimiser = materialize(opt_config)
+    device = materialize(Tconfig.device)
+    train, test = load(Dconfig) |> device
+    model, pars = materialize(Mconfig; device)
+    optimiser = materialize(Oconfig)
 
     solution = []
     loss_train = Float32[]
@@ -53,9 +99,9 @@ function run_experiments(
 
     # training loop
     @info "Training in progress..."
-    for iter in 1:config.iters
-        if opt_config.decay_step != 1 && mod(iter, opt_config.decay_every) == 0
-            optimiser.eta = max(optimiser.eta * opt_config.decay_step, opt_config.decay_min)
+    for iter in 1:Tconfig.iters
+        if Oconfig.decay_step != 1 && mod(iter, Oconfig.decay_every) == 0
+            optimiser.eta = max(optimiser.eta * Oconfig.decay_step, Oconfig.decay_min)
         end
 
         # gradient step
@@ -63,16 +109,16 @@ function run_experiments(
         local s_train
         grads = Flux.Zygote.gradient(pars) do
             s_train = model(train[1])
-            L_train = loss(loss_config, train[2], s_train, pars)
+            L_train = loss(Lconfig, train[2], s_train, pars)
             return L_train
         end
         Flux.Optimise.update!(optimiser, pars, grads)
         append!(loss_train, L_train)
 
         # checkpoint
-        if mod(iter, config.checkpoint_every) == 0 || iter == config.iters
+        if mod(iter, Tconfig.checkpoint_every) == 0 || iter == Tconfig.iters
             s_test = model(test[1])
-            append!(loss_test, loss(loss_config, test[2], s_test, pars))
+            append!(loss_test, loss(Lconfig, test[2], s_test, pars))
 
             solution = Dict(
                 :iter => iter,
