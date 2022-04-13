@@ -24,6 +24,12 @@ function progress!(p::Progress; training::Bool=true)
     end
 end
 
+function reset_time!(p::Progress)
+    p.t_init = time()
+    p.t_last = time()
+    return
+end
+
 function log_progress!(io, p::Progress)
     iter = p.iter
     iter_max = p.iter_max
