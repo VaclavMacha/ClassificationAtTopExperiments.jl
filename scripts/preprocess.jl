@@ -14,7 +14,7 @@ function load_features(path)
 end
 
 nsamples(path) = div(stat(path).size, (22510 * 8))
-filename(dir, id::Int, type) = joinpath(dir, "actor$(lpad(id, 6, "0"))", "$(type).bin")
+filedir(dir, id::Int) = joinpath(dir, "actor$(lpad(id, 6, "0"))")
 
 function save_hdf5(
     dir::AbstractString,
@@ -24,12 +24,17 @@ function save_hdf5(
 )
 
     # summary
-    files = filename.(dir, ids, type)
-    for file in files
-        isfile(file) && continue
-        @warn "file does not exist: $(file)"
+    files = String[]
+    for fdir in filedir.(dir, ids)
+        fls = filter(file -> contains(file, type), readdir(fdir; join = true))
+        if isempty(fls)
+            @warn "File not found in $(fdir)"
+        elseif length(fls) != 1
+            @warn "Multiple files in $(fdir)"
+        else
+            append!(files, fls)
+        end
     end
-    filter!(isfile, files)
 
     n = mapreduce(nsamples, +, files)
     @info "# files: $(length(files))"
@@ -55,8 +60,8 @@ savedir = "/mnt/stego/alaska/"
 ids = 1:100
 
 save_hdf5(dir, ids, "cover_jrm"; savedir)
-save_hdf5(dir, ids, "nsf5_0.1_jrm_partial"; savedir)
-save_hdf5(dir, ids, "nsf5_0.2_jrm_partial"; savedir)
-save_hdf5(dir, ids, "nsf5_0.5_jrm_partial"; savedir)
+save_hdf5(dir, ids, "nsf5_0.1_jrm"; savedir)
+save_hdf5(dir, ids, "nsf5_0.2_jrm"; savedir)
+save_hdf5(dir, ids, "nsf5_0.5_jrm"; savedir)
 
 @info "Finished"
