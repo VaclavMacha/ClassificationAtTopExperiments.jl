@@ -88,6 +88,7 @@ function run_experiments(
     logger = generate_logger(datadir(dir))
 
     # run
+    solution = []
     with_logger(logger) do
         @info "Preparing output dir..."
         save_config(
@@ -102,7 +103,6 @@ function run_experiments(
         model, pars = materialize(Mconfig; device)
         optimiser = materialize(Oconfig)
 
-        solution = []
         progress!(p; training=false)
 
         # training loop
