@@ -81,8 +81,10 @@ function run_experiments(
     end
 
     # logging initialization
-    p = Progress(; iter_max = Tconfig.iters)
-    logger = generate_logger(dir)
+    mkpath(datadir(dir))
+    mkpath(datadir(dir, "checkpoints"))
+    p = Progress(; iter_max=Tconfig.iters)
+    logger = generate_logger(datadir(dir))
 
     # run
     with_logger(logger) do
