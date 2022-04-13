@@ -1,7 +1,9 @@
-sqsum(x) = sum(abs2, x)
-loss(o, x, y, model, pars) = loss(o, y, model(x), pars)
+abstract type LossType end
 
-Base.@kwdef struct CrossEntropy <: Objective
+sqsum(x) = sum(abs2, x)
+loss(o::LossType, x, y, model, pars) = loss(o, y, model(x), pars)
+
+@option "CrossEntropy" struct CrossEntropy <: LossType
     λ::Float32 = 0
     ϵ::Float32 = 0.5
 end
@@ -11,13 +13,18 @@ function loss(o::CrossEntropy, y, s::AbstractArray{T}, pars) where {T}
     return T(o.λ) * sum(sqsum, pars) + logitbinarycrossentropy(s, y; agg)
 end
 
-Base.@kwdef struct PatMatObjective <: Objective
+@option "AATP" struct AATP <: LossType
     λ::Float32 = 0
     τ::Float32 = 0.01
     l::Function = hinge
+    ϑ::Float32 = 1
 end
 
-function loss(o::PatMatObjective, y, s::AbstractArray{T}, pars) where {T}
-    t = threshold(PatMatNP(o.τ, o.l), y, s)
+function loss(o::AATP, y, s::AbstractArray{T}, pars) where {T}
+    t = threshold(PatMatNP(o.τ, x -> o.l(x, o.ϑ)), y, s)
     return T(o.λ) * sum(sqsum, pars) + fnr(y, s, t, o.l)
+end
+
+@option struct LossConfig
+    loss::Union{CrossEntropy,AATP}
 end
