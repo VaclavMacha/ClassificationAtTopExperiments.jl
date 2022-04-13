@@ -16,6 +16,10 @@ function materialize(m::Linear; device=identity)
     return model, pars
 end
 
+@option "unknown" struct Dummy end
+
 @option struct ModelConfig
-    model::Union{Linear}
+    model::Union{Linear, Dummy}
 end
+
+materialize(m::ModelConfig; kwargs...) = materialize(m.model; kwargs...)
