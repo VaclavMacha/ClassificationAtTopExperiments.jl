@@ -24,9 +24,6 @@ Lconfigs = LossConfig.([
     AATP(threshold=PatMatType(1e-5), surrogate=Quadratic()),
 ])
 Oconfigs = [
-    OptConfig(type="Descent", eta=1e-2),
-    OptConfig(type="Descent", eta=1e-3),
-    OptConfig(type="Descent", eta=1e-4),
     OptConfig(type="ADAM", eta=1e-2),
     OptConfig(type="ADAM", eta=1e-3),
     OptConfig(type="ADAM", eta=1e-4),
