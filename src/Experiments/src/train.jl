@@ -1,19 +1,14 @@
-@option "CPU" struct CPU end
-@option "GPU" struct GPU end
-
-materialize(::CPU) = Flux.cpu
-materialize(::GPU) = Flux.cpu
-
-Base.string(::CPU) = "CPU"
-Base.string(::GPU) = "GPU"
-
 @option struct TrainConfig
     seed::Int = 1234
     force::Bool = false
     iters::Int = 1000
     checkpoint_every::Int = 100
-    device::Union{CPU,GPU} = CPU()
+    device::String = "CPU"
 end
+
+materialize(t::TrainConfig) = materialize(Val(Symbol(t.device)))
+materialize(::Val{:CPU}) = Flux.cpu
+materialize(::Val{:GPU}) = Flux.gpu
 
 function Base.string(o::TrainConfig)
     vals = string.([o.seed, o.force, o.iters, o.checkpoint_every, o.device])
@@ -51,8 +46,8 @@ function make_dict(
     d = merge(
         to_dict(Lconfig, YAMLStyle),
         to_dict(Mconfig, YAMLStyle),
-        to_dict(Dconfig, YAMLStyle),
     )
+    d["dataset"] = to_dict(Dconfig, YAMLStyle)
     d["optimiser"] = to_dict(Oconfig, YAMLStyle)
     d["training"] = to_dict(Tconfig, YAMLStyle)
 
@@ -71,6 +66,12 @@ function parse_config(path)
         from_dict(OptConfig, d["optimiser"]),
         from_dict(TrainConfig, d["training"]),
     )
+end
+
+function eval_model(Lconfig, model, pars, data)
+    s = model(data[1])
+    L = loss(Lconfig, data[2], s, pars)
+    return s, L
 end
 
 run_experiments(path) = run_experiments(parse_config(path)...)
@@ -106,11 +107,33 @@ function run_experiments(
 
         # initialization
         @info "Experiment in progress..."
-        device = materialize(Tconfig.device)
-        train, test = load(Dconfig) |> device
+        Random.seed!(Tconfig.seed)
+        device = materialize(Tconfig)
+        train, valid, test = load(Dconfig) |> device
         model, pars = materialize(Mconfig; device)
         optimiser = materialize(Oconfig)
 
+        progress!(p; training=false)
+
+        # initial state
+        s_train, L_train = eval_model(Lconfig, model, pars, train)
+        s_valid, L_valid = eval_model(Lconfig, model, pars, valid)
+        s_test, L_test = eval_model(Lconfig, model, pars, test)
+        append!(p.loss_train, L_train)
+        append!(p.loss_valid, L_valid)
+        append!(p.loss_test, L_test)
+
+        solution = Dict(
+            :iter => 0,
+            :model => deepcopy(cpu(model)),
+            :train => Dict(:y => train[2], :s => cpu(s_train)),
+            :valid => Dict(:y => valid[2], :s => cpu(s_valid)),
+            :test => Dict(:y => test[2], :s => cpu(s_test)),
+            :loss_train => p.loss_train,
+            :loss_valid => p.loss_valid,
+            :loss_test => p.loss_test,
+        )
+        save_model(datadir(dir, "checkpoints", "solution_iter=0.bson"), solution)
         progress!(p; training=false)
 
         # training loop
@@ -134,15 +157,19 @@ function run_experiments(
 
             # checkpoint
             if mod(iter, Tconfig.checkpoint_every) == 0 || iter == Tconfig.iters
-                s_test = model(test[1])
-                append!(p.loss_test, loss(Lconfig, test[2], s_test, pars))
+                s_valid, L_valid = eval_model(Lconfig, model, pars, valid)
+                s_test, L_test = eval_model(Lconfig, model, pars, test)
+                append!(p.loss_valid, L_valid)
+                append!(p.loss_test, L_test)
 
                 solution = Dict(
                     :iter => iter,
                     :model => deepcopy(cpu(model)),
                     :train => Dict(:y => train[2], :s => cpu(s_train)),
+                    :valid => Dict(:y => valid[2], :s => cpu(s_valid)),
                     :test => Dict(:y => test[2], :s => cpu(s_test)),
                     :loss_train => p.loss_train,
+                    :loss_valid => p.loss_valid,
                     :loss_test => p.loss_test,
                 )
                 save_model(datadir(dir, "checkpoints", "solution_iter=$(iter).bson"), solution)

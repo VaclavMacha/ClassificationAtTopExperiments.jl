@@ -21,9 +21,6 @@ using ProgressMeter: durationstring, speedstring
 
 # exports
 export DataConfig
-export Nsf5_01
-export Nsf5_02
-export Nsf5_05
 
 export LossConfig
 export CrossEntropy
