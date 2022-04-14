@@ -26,6 +26,8 @@ end
     dataset::Union{Nsf5_01,Nsf5_02,Nsf5_05}
 end
 
+Base.string(d::DataConfig) = string(d.dataset)
+
 function split_in_half(x, ratio)
     n = size(x, 2)
     k = ratio < 1 ? round(Int64, ratio * n) : n

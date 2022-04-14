@@ -4,12 +4,20 @@
 materialize(::CPU) = Flux.cpu
 materialize(::GPU) = Flux.cpu
 
+Base.string(::CPU) = "CPU"
+Base.string(::GPU) = "GPU"
+
 @option struct TrainConfig
     seed::Int = 1234
     force::Bool = false
     iters::Int = 100
     checkpoint_every::Int = 5
     device::Union{CPU,GPU} = CPU()
+end
+
+function Base.string(o::TrainConfig)
+    vals = string.([o.seed, o.force, o.iters, o.checkpoint_every, o.device])
+    return "Train($(join(vals, ", ")))"
 end
 
 # Save directory
@@ -145,6 +153,7 @@ function run_experiments(
         if !isempty(solution)
             save_model(datadir(dir, "solution.bson"), solution)
         end
+        progress!(p; training=false)
     end
     return solution
 end

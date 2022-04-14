@@ -22,4 +22,5 @@ end
     model::Union{Linear, Dummy}
 end
 
+Base.string(m::ModelConfig) = string(m.model)
 materialize(m::ModelConfig; kwargs...) = materialize(m.model; kwargs...)

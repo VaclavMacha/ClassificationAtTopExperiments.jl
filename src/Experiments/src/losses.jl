@@ -32,9 +32,11 @@ materialize(l::Quadratic, ϑ=l.ϑ) = x -> quadratic(x, ϑ)
 end
 
 materialize(t::PatMatType, l) = PatMatNP(t.τ, l)
+Base.string(t::PatMatType) = "PatMatNP($(t.τ))"
 
 @option "TopPush" struct TopPushType end
 materialize(::TopPushType, l) = TopPush(l)
+Base.string(::TopPushType) = "TopPush"
 
 # loss
 @option "AATP" struct AATP <: LossType
@@ -55,5 +57,6 @@ end
     loss::Union{CrossEntropy,AATP}
 end
 
+Base.string(m::LossConfig) = string(m.loss)
 loss(o::LossConfig, x, y, model, pars) = loss(o.loss, x, y, model, pars)
 loss(o::LossConfig, y, s, pars) = loss(o.loss, y, s, pars)
