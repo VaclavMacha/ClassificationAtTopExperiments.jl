@@ -15,8 +15,6 @@ function progress!(p::Progress; training::Bool=true, force = false)
     end
     if time() - p.t_last >= p.t_min || force
         io = IOBuffer()
-        write(io, "\n")
-    
         log_progress!(io, p)
         log_duration!(io, p)
         log_loss!(io, p)

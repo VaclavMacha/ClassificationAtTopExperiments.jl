@@ -19,9 +19,10 @@ path = readdir(ARGS[1]; join=true, sort=true)[id]
 # precompilation
 s = rand(1:120)
 @info """
-    Config file: $(basename(path))
-    Config dir: $(dirname(path))
-    Sleep: $(s)s
+Configuration:
+⋅ File: $(basename(path))
+⋅ Dir: $(dirname(path))
+⋅ Sleep: $(s)s
 """
 sleep(s)
 
@@ -32,5 +33,4 @@ quickactivate(
 
 using Experiments
 
-@info path
 run_experiments(path)
