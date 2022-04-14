@@ -5,11 +5,17 @@ using Experiments
 
 configsdir(args...) = projectdir("configs", args...)
 
-Dconfigs = DataConfig.([
-    Nsf5_01(),
-    Nsf5_02(),
-    Nsf5_05(),
-])
+Dconfigs = [
+    DataConfig(type="Nsf5_01", stego_ratio=1),
+    DataConfig(type="Nsf5_01", stego_ratio=0.5),
+    DataConfig(type="Nsf5_01", stego_ratio=0.1),
+    DataConfig(type="Nsf5_02", stego_ratio=1),
+    DataConfig(type="Nsf5_02", stego_ratio=0.5),
+    DataConfig(type="Nsf5_02", stego_ratio=0.1),
+    DataConfig(type="Nsf5_05", stego_ratio=1),
+    DataConfig(type="Nsf5_05", stego_ratio=0.5),
+    DataConfig(type="Nsf5_05", stego_ratio=0.1),
+]
 
 Lconfigs = LossConfig.([
     CrossEntropy(ϵ=0.5),
@@ -26,10 +32,9 @@ Lconfigs = LossConfig.([
 Oconfigs = [
     OptConfig(type="ADAM", eta=1e-2),
     OptConfig(type="ADAM", eta=1e-3),
-    OptConfig(type="ADAM", eta=1e-4),
 ]
 Mconfig = ModelConfig(Linear())
-Tconfig = TrainConfig(iters = 1000, checkpoint_every = 100)
+Tconfig = TrainConfig(iters=1000, checkpoint_every=100)
 
 i = 0
 for Dconfig in Dconfigs, Lconfig in Lconfigs, Oconfig in Oconfigs
