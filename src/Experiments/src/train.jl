@@ -113,8 +113,6 @@ function run_experiments(
         model, pars = materialize(Mconfig; device)
         optimiser = materialize(Oconfig)
 
-        progress!(p; training=false)
-
         # initial state
         s_train, L_train = eval_model(Lconfig, model, pars, train)
         s_valid, L_valid = eval_model(Lconfig, model, pars, valid)
@@ -134,11 +132,11 @@ function run_experiments(
             :loss_test => p.loss_test,
         )
         save_model(datadir(dir, "checkpoints", "solution_iter=0.bson"), solution)
-        progress!(p; training=false)
-
+        
         # training loop
-        @info "Training in progress..."
+        progress!(p; training=false, force=true)
         reset_time!(p)
+        @info "Training in progress..."
         for iter in 1:Tconfig.iters
             if Oconfig.decay_step != 1 && mod(iter, Oconfig.decay_every) == 0
                 optimiser.eta = max(optimiser.eta * Oconfig.decay_step, Oconfig.decay_min)
@@ -180,7 +178,7 @@ function run_experiments(
         if !isempty(solution)
             save_model(datadir(dir, "solution.bson"), solution)
         end
-        progress!(p; training=false)
+        progress!(p; training=false, force=true)
     end
     return solution
 end
