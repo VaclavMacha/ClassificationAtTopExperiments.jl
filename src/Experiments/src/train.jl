@@ -10,8 +10,8 @@ Base.string(::GPU) = "GPU"
 @option struct TrainConfig
     seed::Int = 1234
     force::Bool = false
-    iters::Int = 100
-    checkpoint_every::Int = 5
+    iters::Int = 1000
+    checkpoint_every::Int = 100
     device::Union{CPU,GPU} = CPU()
 end
 
