@@ -9,14 +9,14 @@ Base.@kwdef mutable struct Progress
     loss_test::Vector{Float32} = Float32[]
 end
 
-function progress!(p::Progress; training::Bool=true)
+function progress!(p::Progress; training::Bool=true, force = false)
     if training
         p.iter += 1
     end
-    if time() - p.t_last >= p.t_min || p.iter == p.iter_max
+    if time() - p.t_last >= p.t_min || force
         io = IOBuffer()
         write(io, "\n")
-
+    
         log_progress!(io, p)
         log_duration!(io, p)
         log_loss!(io, p)
