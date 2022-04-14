@@ -56,11 +56,10 @@ function load(d::D) where {D<:DataConfig}
         reshape(1:(length(i1_test)+length(i2_test)) .> length(i1_test), 1, :),
     )
     @info """
-    
-    Dataset:
-    ⋅ Train: $(size(train[1]))
-    ⋅ Valid: $(size(valid[1]))
-    ⋅ Test: $(size(test[1]))
+    Dataset: all (cover/stego)
+    ⋅ Train: $(length(train[2])) ($(sum(.~train[2]))/$(sum(train[2])))
+    ⋅ Valid: $(length(valid[2])) ($(sum(.~valid[2]))/$(sum(valid[2])))
+    ⋅ Test: $(length(test[2])) ($(sum(.~test[2]))/$(sum(test[2])))
     """
     return train, valid, test
 end

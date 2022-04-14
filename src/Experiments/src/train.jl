@@ -102,6 +102,11 @@ function run_experiments(
         @info """
         Initialization:
         ⋅ Dir: $(datadir(dir))
+        ⋅ Loss config: $(string(Lconfig))
+        ⋅ Model config: $(string(Mconfig))
+        ⋅ Dataset config: $(string(Dconfig))
+        ⋅ Optimiser config: $(string(Oconfig))
+        ⋅ Train config: $(string(Tconfig))
         """
         save_config(
             datadir(dir, "config.yaml"),
