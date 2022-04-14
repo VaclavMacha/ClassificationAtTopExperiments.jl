@@ -13,7 +13,7 @@ function progress!(p::Progress; training::Bool=true)
     if training
         p.iter += 1
     end
-    if time() - p.t_last >= p.t_min
+    if time() - p.t_last >= p.t_min || p.iter == p.iter_max
         io = IOBuffer()
         write(io, "\n")
 
