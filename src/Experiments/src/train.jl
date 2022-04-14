@@ -99,14 +99,16 @@ function run_experiments(
     # run
     solution = []
     with_logger(logger) do
-        @info "Preparing output dir..."
+        @info """
+        Initialization:
+        ⋅ Dir: $(datadir(dir))
+        """
         save_config(
             datadir(dir, "config.yaml"),
             make_dict(Lconfig, Mconfig, Dconfig, Oconfig, Tconfig)
         )
 
         # initialization
-        @info "Experiment in progress..."
         Random.seed!(Tconfig.seed)
         device = materialize(Tconfig)
         train, valid, test = load(Dconfig) |> device
@@ -132,7 +134,7 @@ function run_experiments(
             :loss_test => p.loss_test,
         )
         save_model(datadir(dir, "checkpoints", "solution_iter=0.bson"), solution)
-        
+
         # training loop
         progress!(p; training=false, force=true)
         reset_time!(p)

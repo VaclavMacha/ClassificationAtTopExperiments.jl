@@ -55,5 +55,11 @@ function load(d::D) where {D<:DataConfig}
         hcat(x_cover[:, i1_test], x_stego[:, i2_test]),
         reshape(1:(length(i1_test)+length(i2_test)) .> length(i1_test), 1, :),
     )
+    @info"""
+    Dataset:
+    ⋅ File: $(size(train[1]))
+    ⋅ Valid: $(size(valid[1]))
+    ⋅ Test: $(size(test[1]))
+    """
     return train, valid, test
 end
