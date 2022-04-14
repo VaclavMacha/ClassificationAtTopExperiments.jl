@@ -11,6 +11,7 @@ end
 
 @option struct DataConfig
     type::String = "Nsf5_01"
+    full_dataset::Bool = false
     at_train::Float32 = 0.45
     at_valid::Float32 = 0.05
     cover_ratio::Float32 = 1
@@ -18,7 +19,7 @@ end
 end
 
 function Base.string(d::DataConfig)
-    vals = string.([d.at_train, d.at_valid, d.cover_ratio, d.stego_ratio])
+    vals = string.([d.full_dataset, d.at_train, d.at_valid, d.cover_ratio, d.stego_ratio])
     return "$(string(d.type))($(join(vals, ", ")))"
 end
 
@@ -30,13 +31,19 @@ function split_data(n, at, ratio)
     return train, valid, test
 end
 
-get_path(d::DataConfig) = get_path(Val(Symbol(d.type)))
-get_path(::Val{:Nsf5_01}) = datadir("dataset", "nsf5_0.1_jrm.h5")
-get_path(::Val{:Nsf5_02}) = datadir("dataset", "nsf5_0.2_jrm.h5")
-get_path(::Val{:Nsf5_05}) = datadir("dataset", "nsf5_0.5_jrm.h5")
+function get_path(d::DataConfig)
+    return get_path(Val(Symbol(d.type)), ifelse(d.full_dataset, "full","partial"))
+end
+get_path(::Val{:Nsf5_01}, dir) = datadir("dataset", dir, "nsf5_0.1_jrm.h5")
+get_path(::Val{:Nsf5_02}, dir) = datadir("dataset", dir, "nsf5_0.2_jrm.h5")
+get_path(::Val{:Nsf5_05}, dir) = datadir("dataset", dir, "nsf5_0.5_jrm.h5")
 
-function load(d::D) where {D<:DataConfig}
-    x_cover = load_hdf5(datadir("dataset", "cover_jrm.h5"))
+function load(d::DataConfig)
+    x_cover = load_hdf5(datadir(
+        "dataset",
+        ifelse(d.full_dataset, "full","partial"),
+        "cover_jrm.h5")
+    )
     x_stego = load_hdf5(get_path(d))
 
     at = (d.at_train, d.at_valid)
