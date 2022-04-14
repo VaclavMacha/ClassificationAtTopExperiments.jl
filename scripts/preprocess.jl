@@ -57,11 +57,11 @@ end
 
 dir = "/mnt/stego/flcc80-all-fea/"
 savedir = "/mnt/stego/alaska/"
-ids = 1:100
+ids = setdiff(1:111, 6:10:116)
 
-save_hdf5(dir, ids, "cover_jrm"; savedir)
 save_hdf5(dir, ids, "nsf5_0.1_jrm"; savedir)
 save_hdf5(dir, ids, "nsf5_0.2_jrm"; savedir)
 save_hdf5(dir, ids, "nsf5_0.5_jrm"; savedir)
+save_hdf5(dir, ids, "cover_jrm"; savedir)
 
 @info "Finished"
