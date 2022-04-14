@@ -1,7 +1,8 @@
 function load_hdf5(path::AbstractString)
     @info """
-    Loading file: $(path)
-    (it may take several minutes to load data into memory)
+    Loading Data:
+    ⋅ File: $(path)
+    ⋅ It may take several minutes to load data into memory
     """
     return h5open(path, "r") do fid
         read(fid, "data")
@@ -35,8 +36,7 @@ get_path(::Val{:Nsf5_02}) = datadir("dataset", "nsf5_0.2_jrm.h5")
 get_path(::Val{:Nsf5_05}) = datadir("dataset", "nsf5_0.5_jrm.h5")
 
 function load(d::D) where {D<:DataConfig}
-    # x_cover = load_hdf5(datadir("dataset", "cover_jrm.h5"))
-    x_cover = load_hdf5(get_path(d))
+    x_cover = load_hdf5(datadir("dataset", "cover_jrm.h5"))
     x_stego = load_hdf5(get_path(d))
 
     at = (d.at_train, d.at_valid)
