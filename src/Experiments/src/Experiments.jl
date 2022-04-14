@@ -10,6 +10,7 @@ using Flux
 using HDF5
 using Logging
 using LoggingExtras
+using MLUtils
 using Plots
 using Random
 using Statistics
