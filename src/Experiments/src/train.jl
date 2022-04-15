@@ -11,7 +11,7 @@ materialize(::Val{:CPU}) = Flux.cpu
 materialize(::Val{:GPU}) = Flux.gpu
 
 function Base.string(o::TrainConfig)
-    vals = string.([o.seed, o.force, o.iters, o.checkpoint_every, o.device])
+    vals = dir_string.((o.seed, o.force, o.iters, o.checkpoint_every, o.device))
     return "Train($(join(vals, ", ")))"
 end
 
@@ -26,7 +26,7 @@ function dir_name(
 
     return joinpath(
         "results",
-        string.([Tconfig, Dconfig, Mconfig, Oconfig, Lconfig])...,
+        string.((Tconfig, Dconfig, Mconfig, Oconfig, Lconfig))...,
     )
 end
 

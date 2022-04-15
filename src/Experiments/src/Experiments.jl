@@ -38,6 +38,11 @@ export make_dict, save_config, load_config, parse_config
 export load_model, save_model
 
 # includes
+dir_string(x) = string(x)
+dir_string(x::Real) = round(Float64(x); digits=8)
+dir_string(x::Int64) = string(x)
+dir_string(x::Bool) = string(x)
+
 include("datasets.jl")
 include("losses.jl")
 include("models.jl")

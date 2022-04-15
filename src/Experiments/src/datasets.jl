@@ -19,7 +19,9 @@ end
 end
 
 function Base.string(d::DataConfig)
-    vals = string.([d.full_dataset, d.at_train, d.at_valid, d.cover_ratio, d.stego_ratio])
+    vals = dir_string.(
+        (d.full_dataset, d.at_train, d.at_valid, d.cover_ratio, d.stego_ratio)
+    )
     return "$(string(d.type))($(join(vals, ", ")))"
 end
 
