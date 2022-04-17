@@ -146,7 +146,11 @@ function run_experiments(
         @info "Training in progress..."
         for iter in 1:Tconfig.iters
             if Oconfig.decay_step != 1 && mod(iter, Oconfig.decay_every) == 0
-                optimiser.eta = max(optimiser.eta * Oconfig.decay_step, Oconfig.decay_min)
+
+                optimiser.eta = max(
+                    Float32(optimiser.eta * Oconfig.decay_step),
+                    Float32(Oconfig.decay_min),
+                )
             end
 
             # gradient step
