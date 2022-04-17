@@ -67,9 +67,9 @@ function load(d::DataConfig)
     i1_train, i1_valid, i1_test = split_data(s_cover[2], at, d.cover_ratio)
     i2_train, i2_valid, i2_test = split_data(s_stego[2], at, d.stego_ratio)
 
-    i_train = vcat(i1_train, i2_train .+ s_stego[2])
-    i_valid = vcat(i1_valid, i2_valid .+ s_stego[2])
-    i_test = vcat(i1_test, i2_test .+ s_stego[2])
+    i_train = vcat(i1_train, i2_train .+ s_cover[2])
+    i_valid = vcat(i1_valid, i2_valid .+ s_cover[2])
+    i_test = vcat(i1_test, i2_test .+ s_cover[2])
 
     train = @views (x[:, i_train], y[:, i_train])
     valid = @views (x[:, i_valid], y[:, i_valid])
