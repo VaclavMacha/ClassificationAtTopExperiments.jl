@@ -57,7 +57,7 @@ end
 
 function loss(o::AATP, y, s::AbstractArray{T}, pars) where {T}
     l1 = materialize(o.surrogate, 1)
-    l2 = materialize(o.surrogate, T(o.ϑ))
+    l2 = materialize(o.surrogate, T(o.surrogate.ϑ))
     t_type = materialize(o.threshold, l2)
     t = threshold(t_type, y, s)
     return T(o.λ) * sum(sqsum, pars) + fnr(y, s, t, l1)
