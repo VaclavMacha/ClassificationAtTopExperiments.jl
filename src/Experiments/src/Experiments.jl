@@ -3,7 +3,9 @@ module Experiments
 using AccuracyAtTopPrimal
 using BSON
 using Configurations
+using CSV
 using Dates
+using DataFrames
 using DrWatson
 using EvalMetrics
 using Flux
