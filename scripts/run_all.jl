@@ -23,6 +23,6 @@ sbatch_array(
     scriptsdir("run_model.jl"),
     configs_dir("full");
     logdir=log_dir(),
-    partition="amd",
+    partition="amdextralong",
     mem="1000G"
 ) |> run
