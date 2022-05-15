@@ -16,10 +16,29 @@ function materialize(m::Linear; device=identity)
     return model, pars
 end
 
+@option "EfficientNet" struct EfficientNet <: ModelType
+    pretrained = false
+    type = "b0"
+end
+
+function materialize(m::EfficientNet; device=identity)
+    if m.pretrained
+        error("pretrained model not available")
+    else
+        @info "Generating new network"
+        model = EffNet(
+            "efficientnet-$(m.type)";
+            n_classes=1,
+            in_channels=3
+        ) |> device
+    end
+    return model, Flux.params(model)
+end
+
 @option "unknown" struct Dummy end
 
 @option struct ModelConfig
-    model::Union{Linear, Dummy}
+    model::Union{Linear,EfficientNet,Dummy}
 end
 
 Base.string(m::ModelConfig) = string(m.model)

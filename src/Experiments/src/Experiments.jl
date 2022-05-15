@@ -7,6 +7,7 @@ using CSV
 using Dates
 using DataFrames
 using DrWatson
+using EfficientNet
 using EvalMetrics
 using Flux
 using HDF5
@@ -31,6 +32,7 @@ export Hinge, Quadratic, PatMatType, TopPushType
 
 export ModelConfig
 export Linear
+export EfficientNet
 
 export OptConfig
 export TrainConfig
