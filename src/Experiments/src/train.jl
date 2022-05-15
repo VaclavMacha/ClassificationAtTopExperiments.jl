@@ -74,7 +74,7 @@ function parse_config(path)
     return (
         from_dict(LossConfig, Dict("loss" => d["loss"])),
         from_dict(ModelConfig, Dict("model" => d["model"])),
-        from_dict(DataConfig, d["dataset"]),
+        from_dict(DataConfig, Dict("dataset" => d["dataset"])),
         from_dict(OptConfig, d["optimiser"]),
         from_dict(TrainConfig, d["training"]),
     )

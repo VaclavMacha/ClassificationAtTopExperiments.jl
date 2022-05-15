@@ -25,6 +25,9 @@ using ProgressMeter: durationstring, speedstring
 
 # exports
 export DataConfig
+export AbstractNsf5
+export Nsf5
+export Nsf5Small
 
 export LossConfig
 export CrossEntropy
@@ -48,7 +51,9 @@ dir_string(x::Real) = round(Float64(x); digits=8)
 dir_string(x::Int64) = string(x)
 dir_string(x::Bool) = string(x)
 
+include("datasets/Nsf5.jl")
 include("datasets.jl")
+
 include("filedataset.jl")
 include("batchloader.jl")
 include("losses.jl")
