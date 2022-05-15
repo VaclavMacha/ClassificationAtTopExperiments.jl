@@ -39,14 +39,16 @@ function split_data(n, at, ratio)
     return train, valid, test
 end
 
+nsf5dir(args...) = datadir("dataset", args...)
+
 function get_path(d::DataConfig; cover::Bool = false)
     type = cover ? :Cover : Symbol(d.type)
     return get_path(Val(type), ifelse(d.full_dataset, "full","partial"))
 end
-get_path(::Val{:Cover}, dir) = datadir("dataset", dir, "cover_jrm.h5")
-get_path(::Val{:Nsf5_01}, dir) = datadir("dataset", dir, "nsf5_0.1_jrm.h5")
-get_path(::Val{:Nsf5_02}, dir) = datadir("dataset", dir, "nsf5_0.2_jrm.h5")
-get_path(::Val{:Nsf5_05}, dir) = datadir("dataset", dir, "nsf5_0.5_jrm.h5")
+get_path(::Val{:Cover}, dir) = nsf5dir(dir, "cover_jrm.h5")
+get_path(::Val{:Nsf5_01}, dir) = nsf5dir(dir, "nsf5_0.1_jrm.h5")
+get_path(::Val{:Nsf5_02}, dir) = nsf5dir(dir, "nsf5_0.2_jrm.h5")
+get_path(::Val{:Nsf5_05}, dir) = nsf5dir(dir, "nsf5_0.5_jrm.h5")
 
 function load(d::DataConfig)
     file_cover = get_path(d; cover=true)
