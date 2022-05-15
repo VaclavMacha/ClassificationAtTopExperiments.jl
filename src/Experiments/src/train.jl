@@ -92,7 +92,7 @@ function eval_model(
     s = similar(x, 1, length(y))
 
     for inds in partition(1:length(y), batch_size)
-        xi = getobs(x, inds) |> device
+        xi = getobs(x, inds) |> Array |> device
         s[1, inds] .= cpu(model(xi))[:]
     end
     return s, loss(Lconfig, y, s, pars)
@@ -113,13 +113,13 @@ run_experiments(path) = run_experiments(parse_config(path)...)
 function eval_model(
     p::Progress,
     epoch,
-    Lconfig
+    Lconfig,
     model,
     pars,
-    train
+    train,
     valid,
     test;
-    device
+    device,
 )
     tm1 = @timed begin
         s_train, L_train = eval_model(Lconfig, model, pars, train; device)
@@ -134,8 +134,7 @@ function eval_model(
         append!(p.loss_test, L_test)
     end
     @info """
-    Evaluation:
-    ⋅ Epoch: $(epoch)
+    Evaluation after epoch $(epoch):
     ⋅ Train: $(durationstring(tm1.time))
     ⋅ Valid: $(durationstring(tm2.time))
     ⋅ Test: $(durationstring(tm3.time))
@@ -153,8 +152,6 @@ function eval_model(
         :loss_test => p.loss_test,
     )
 end
-
-save_model(datadir(dir, "checkpoints", "solution_epoch=$(epoch).bson"), solution)
 
 function run_experiments(
     Lconfig::LossConfig,
@@ -200,7 +197,7 @@ function run_experiments(
         model, pars = materialize(Mconfig; device)
         optimiser = materialize(Oconfig)
         p = Progress(;
-            epoch_max = Tconfig.epochs*length(batches),
+            iter_max = Tconfig.epochs*length(batches),
         )
 
         # initial state
@@ -224,20 +221,21 @@ function run_experiments(
 
             # gradient step
             for batch in batches
+                x, y = device(batch)
                 local L_batch
                 grads = Flux.Zygote.gradient(pars) do
-                    x, y = device(batch)
                     L_batch = loss(Lconfig, y, model(x), pars)
                     return L_batch
                 end
                 Flux.Optimise.update!(optimiser, pars, grads)
                 append!(p.loss_batch, L_batch)
+                progress!(p)
             end
 
             # checkpoint
             if mod(epoch, Tconfig.checkpoint_every) == 0 || epoch == Tconfig.epochs
                 solution = eval_model(
-                    p, epoch Lconfig, model, pars, train, valid, test;
+                    p, epoch, Lconfig, model, pars, train, valid, test;
                     device
                 )
                 save_model(
@@ -245,7 +243,6 @@ function run_experiments(
                     solution,
                 )
             end
-            progress!(p)
         end
         @info "Saving final solution..."
         if !isempty(solution)

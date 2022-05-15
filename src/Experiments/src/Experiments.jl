@@ -19,6 +19,7 @@ using Random
 using Statistics
 using YAML
 
+using Base.Iterators: partition
 using Flux.Losses: logitbinarycrossentropy
 using ProgressMeter: durationstring, speedstring
 

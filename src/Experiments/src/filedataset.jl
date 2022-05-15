@@ -1,4 +1,4 @@
-struct FileDataset{F, T<:AbstractString} <: AbstractDataContainer
+struct FileDataset{F, T<:AbstractString}
     loadfn::F
     paths::Vector{T}
 end
