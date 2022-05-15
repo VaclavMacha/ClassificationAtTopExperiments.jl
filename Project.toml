@@ -3,6 +3,7 @@ name = "SteganographyExperiments.jl"
 [deps]
 AccuracyAtTopPrimal = "fe3dcc9b-297f-427f-9453-e9e3c6e3e222"
 DrWatson = "634d3b9d-ee7a-5ddf-bec9-22491ea816e1"
+EfficientNet = "8ae15c95-d670-4eca-a723-7364633ab054"
 Experiments = "0ed54c3c-39b1-4574-89de-30629e1c012c"
 PlotlyJS = "f0f68f2c-4968-5e81-91da-67840de0976a"
 
