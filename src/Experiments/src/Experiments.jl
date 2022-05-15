@@ -19,7 +19,10 @@ using MLUtils
 using Plots
 using Random
 using Statistics
+using StatsBase
 using YAML
+
+import AccuracyAtTop
 
 using Base.Iterators: partition
 using Flux.Losses: logitbinarycrossentropy
