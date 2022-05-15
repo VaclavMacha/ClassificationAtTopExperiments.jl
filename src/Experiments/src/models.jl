@@ -26,11 +26,12 @@ function materialize(m::EfficientNet; device=identity)
         error("pretrained model not available")
     else
         @info "Generating new network"
-        model = EffNet(
-            "efficientnet-$(m.type)";
-            n_classes=1,
-            in_channels=3
-        ) |> device
+        # model = EffNet(
+        #     "efficientnet-$(m.type)";
+        #     n_classes=1,
+        #     in_channels=3
+        # ) |> device
+        model = Chain(Flux.flatten, Dense(196608, 1)) |> device
     end
     return model, Flux.params(model)
 end

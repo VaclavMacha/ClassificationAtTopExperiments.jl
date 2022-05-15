@@ -11,6 +11,8 @@ using EfficientNet
 using EvalMetrics
 using Flux
 using HDF5
+using ImageCore
+using JpegTurbo
 using Logging
 using LoggingExtras
 using MLUtils
@@ -21,6 +23,7 @@ using YAML
 
 using Base.Iterators: partition
 using Flux.Losses: logitbinarycrossentropy
+using MLDatasets: FileDataset
 using ProgressMeter: durationstring, speedstring
 
 # exports
@@ -28,6 +31,9 @@ export DataConfig
 export AbstractNsf5
 export Nsf5
 export Nsf5Small
+export AbstractJMiPOD
+export JMiPOD
+export JMiPODSmall
 
 export LossConfig
 export CrossEntropy
@@ -52,9 +58,8 @@ dir_string(x::Int64) = string(x)
 dir_string(x::Bool) = string(x)
 
 include("datasets/Nsf5.jl")
+include("datasets/JMiPOD.jl")
 include("datasets.jl")
-
-include("filedataset.jl")
 include("batchloader.jl")
 include("losses.jl")
 include("models.jl")

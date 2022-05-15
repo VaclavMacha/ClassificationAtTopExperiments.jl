@@ -65,7 +65,14 @@ function (b::BatchLoader)()
     end
     append!(b.ts, AccuracyAtTop.buffer_ts())
     b.last_batch .= inds
-    x, y = getobs((b.x, b.y), inds)
-    x = cat(x...; dims = ndims(x) + 1)
-    return b.device(x), b.device(Float32.(y))
+    x, y = getobs_threads((b.x, b.y), inds)
+    return b.device(batch(x)), b.device(Float32.(y))
+end
+
+function getobs_threads(data, inds)
+    data_batch = Vector{Any}(undef, length(inds))
+    Threads.@threads for i in 1:length(inds)
+        data_batch[i] = getobs(data, inds[i])
+    end
+    return first.(data_batch), last.(data_batch)
 end
