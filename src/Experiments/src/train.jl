@@ -89,22 +89,23 @@ function eval_model(
     batch_size = 1000,
 )
     x, y = data
-    s = similar(x, 1, length(y))
+    batch_size = batch_size == 0 ? length(y) : batch_size
+    s = zeros(Float32, 1, length(y))
 
     for inds in partition(1:length(y), batch_size)
-        xi = getobs(x, inds) |> Array |> device
-        s[1, inds] .= cpu(model(xi))[:]
+        xi, yi = getobs_threads(data, inds)
+        s[1, inds] .= cpu(model(device(batch(xi))))[:]
     end
     return s, loss(Lconfig, y, s, pars)
 end
 
-function create_batches(c::TrainConfig, train)
+function create_batches(c::TrainConfig, train; device)
     if c.batch_size == 0
         return (train, )
     end
 
-    loader = BatchLoader(train...; c.buffer, c.batch_neg, c.batch_pos, c.device)
-    iters = ceil(Int, (length(c.batch_neg) + length(c.batch_pos)) / c.batch_size)
+    loader = BatchLoader(train...; c.buffer, c.batch_neg, c.batch_pos, device)
+    iters = ceil(Int, length(train[2]) / c.batch_size)
     return (loader() for _ in 1:iters)
 end
 
@@ -119,18 +120,18 @@ function eval_model(
     train,
     valid,
     test;
-    device,
+    kwargs...
 )
     tm1 = @timed begin
-        s_train, L_train = eval_model(Lconfig, model, pars, train; device)
+        s_train, L_train = eval_model(Lconfig, model, pars, train; kwargs...)
         append!(p.loss_train, L_train)
     end
     tm2 = @timed begin
-        s_valid, L_valid = eval_model(Lconfig, model, pars, valid; device)
+        s_valid, L_valid = eval_model(Lconfig, model, pars, valid; kwargs...)
         append!(p.loss_valid, L_valid)
     end
     tm3 = @timed begin
-        s_test, L_test = eval_model(Lconfig, model, pars, test; device)
+        s_test, L_test = eval_model(Lconfig, model, pars, test; kwargs...)
         append!(p.loss_test, L_test)
     end
     @info """
@@ -193,7 +194,7 @@ function run_experiments(
         Random.seed!(Tconfig.seed)
         device = materialize(Tconfig)
         train, valid, test = load(Dconfig)
-        batches = create_batches(Tconfig, train)
+        batches = create_batches(Tconfig, train; device)
         model, pars = materialize(Mconfig; device)
         optimiser = materialize(Oconfig)
         p = Progress(;
@@ -201,7 +202,10 @@ function run_experiments(
         )
 
         # initial state
-        solution = eval_model(p, 0, Lconfig, model, pars, train, valid, test; device)
+        solution = eval_model(
+            p, 0, Lconfig, model, pars, train, valid, test;
+            device, batch_size = Tconfig.batch_size
+        )
         save_model(
             datadir(dir, "checkpoints", "solution_epoch=0.bson"),
             solution,

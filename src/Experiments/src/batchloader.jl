@@ -66,7 +66,7 @@ function (b::BatchLoader)()
     append!(b.ts, AccuracyAtTop.buffer_ts())
     b.last_batch .= inds
     x, y = getobs_threads((b.x, b.y), inds)
-    return b.device(batch(x)), b.device(Float32.(y))
+    return b.device(batch(x)), b.device(Float32.(batch(y)))
 end
 
 function getobs_threads(data, inds)
