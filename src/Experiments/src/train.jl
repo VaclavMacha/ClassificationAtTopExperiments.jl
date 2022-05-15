@@ -1,8 +1,12 @@
 @option struct TrainConfig
     seed::Int = 1234
     force::Bool = false
-    iters::Int = 1000
+    buffer::Bool = false
+    epochs::Int = 1000
     checkpoint_every::Int = 100
+    batch_size::Int = 0
+    batch_pos::Int = 0
+    batch_neg::Int = 0
     device::String = "CPU"
 end
 
@@ -11,7 +15,15 @@ materialize(::Val{:CPU}) = Flux.cpu
 materialize(::Val{:GPU}) = Flux.gpu
 
 function Base.string(o::TrainConfig)
-    vals = dir_string.((o.seed, o.force, o.iters, o.checkpoint_every, o.device))
+    vals = dir_string.((
+        o.seed,
+        o.buffer,
+        o.epochs,
+        o.checkpoint_every,
+        o.batch_size,
+        o.batch_pos,
+        o.batch_neg,
+    ))
     return "Train($(join(vals, ", ")))"
 end
 
@@ -68,13 +80,81 @@ function parse_config(path)
     )
 end
 
-function eval_model(Lconfig, model, pars, data)
-    s = model(data[1])
-    L = loss(Lconfig, data[2], s, pars)
-    return s, L
+function eval_model(
+    Lconfig,
+    model,
+    pars,
+    data;
+    device = identity,
+    batch_size = 1000,
+)
+    x, y = data
+    s = similar(x, 1, length(y))
+
+    for inds in partition(1:length(y), batch_size)
+        xi = getobs(x, inds) |> device
+        s[1, inds] .= cpu(model(xi))[:]
+    end
+    return s, loss(Lconfig, y, s, pars)
+end
+
+function create_batches(c::TrainConfig, train)
+    if c.batch_size == 0
+        return (train, )
+    end
+
+    loader = BatchLoader(train...; c.buffer, c.batch_neg, c.batch_pos, c.device)
+    iters = ceil(Int, (length(c.batch_neg) + length(c.batch_pos)) / c.batch_size)
+    return (loader() for _ in 1:iters)
 end
 
 run_experiments(path) = run_experiments(parse_config(path)...)
+
+function eval_model(
+    p::Progress,
+    epoch,
+    Lconfig
+    model,
+    pars,
+    train
+    valid,
+    test;
+    device
+)
+    tm1 = @timed begin
+        s_train, L_train = eval_model(Lconfig, model, pars, train; device)
+        append!(p.loss_train, L_train)
+    end
+    tm2 = @timed begin
+        s_valid, L_valid = eval_model(Lconfig, model, pars, valid; device)
+        append!(p.loss_valid, L_valid)
+    end
+    tm3 = @timed begin
+        s_test, L_test = eval_model(Lconfig, model, pars, test; device)
+        append!(p.loss_test, L_test)
+    end
+    @info """
+    Evaluation:
+    ⋅ Epoch: $(epoch)
+    ⋅ Train: $(durationstring(tm1.time))
+    ⋅ Valid: $(durationstring(tm2.time))
+    ⋅ Test: $(durationstring(tm3.time))
+    """
+
+    return Dict(
+        :epoch => epoch,
+        :model => deepcopy(cpu(model)),
+        :train => Dict(:y => train[2], :s => cpu(s_train)),
+        :valid => Dict(:y => valid[2], :s => cpu(s_valid)),
+        :test => Dict(:y => test[2], :s => cpu(s_test)),
+        :loss_batch => p.loss_batch,
+        :loss_train => p.loss_train,
+        :loss_valid => p.loss_valid,
+        :loss_test => p.loss_test,
+    )
+end
+
+save_model(datadir(dir, "checkpoints", "solution_epoch=$(epoch).bson"), solution)
 
 function run_experiments(
     Lconfig::LossConfig,
@@ -93,7 +173,6 @@ function run_experiments(
     # logging initialization
     mkpath(datadir(dir))
     mkpath(datadir(dir, "checkpoints"))
-    p = Progress(; iter_max=Tconfig.iters)
     logger = generate_logger(datadir(dir))
 
     # run
@@ -116,37 +195,27 @@ function run_experiments(
         # initialization
         Random.seed!(Tconfig.seed)
         device = materialize(Tconfig)
-        train, valid, test = load(Dconfig) |> device
+        train, valid, test = load(Dconfig)
+        batches = create_batches(Tconfig, train)
         model, pars = materialize(Mconfig; device)
         optimiser = materialize(Oconfig)
+        p = Progress(;
+            epoch_max = Tconfig.epochs*length(batches),
+        )
 
         # initial state
-        s_train, L_train = eval_model(Lconfig, model, pars, train)
-        s_valid, L_valid = eval_model(Lconfig, model, pars, valid)
-        s_test, L_test = eval_model(Lconfig, model, pars, test)
-        append!(p.loss_train, L_train)
-        append!(p.loss_valid, L_valid)
-        append!(p.loss_test, L_test)
-
-        solution = Dict(
-            :iter => 0,
-            :model => deepcopy(cpu(model)),
-            :train => Dict(:y => train[2], :s => cpu(s_train)),
-            :valid => Dict(:y => valid[2], :s => cpu(s_valid)),
-            :test => Dict(:y => test[2], :s => cpu(s_test)),
-            :loss_train => p.loss_train,
-            :loss_valid => p.loss_valid,
-            :loss_test => p.loss_test,
+        solution = eval_model(p, 0, Lconfig, model, pars, train, valid, test; device)
+        save_model(
+            datadir(dir, "checkpoints", "solution_epoch=0.bson"),
+            solution,
         )
-        save_model(datadir(dir, "checkpoints", "solution_iter=0.bson"), solution)
 
         # training loop
         progress!(p; training=false, force=true)
         reset_time!(p)
         @info "Training in progress..."
-        for iter in 1:Tconfig.iters
-            if Oconfig.decay_step != 1 && mod(iter, Oconfig.decay_every) == 0
-
+        for epoch in 1:Tconfig.epochs
+            if Oconfig.decay_step != 1 && mod(epoch, Oconfig.decay_every) == 0
                 optimiser.eta = max(
                     Float32(optimiser.eta * Oconfig.decay_step),
                     Float32(Oconfig.decay_min),
@@ -154,34 +223,27 @@ function run_experiments(
             end
 
             # gradient step
-            local L_train
-            local s_train
-            grads = Flux.Zygote.gradient(pars) do
-                s_train = model(train[1])
-                L_train = loss(Lconfig, train[2], s_train, pars)
-                return L_train
+            for batch in batches
+                local L_batch
+                grads = Flux.Zygote.gradient(pars) do
+                    x, y = device(batch)
+                    L_batch = loss(Lconfig, y, model(x), pars)
+                    return L_batch
+                end
+                Flux.Optimise.update!(optimiser, pars, grads)
+                append!(p.loss_batch, L_batch)
             end
-            Flux.Optimise.update!(optimiser, pars, grads)
-            append!(p.loss_train, L_train)
 
             # checkpoint
-            if mod(iter, Tconfig.checkpoint_every) == 0 || iter == Tconfig.iters
-                s_valid, L_valid = eval_model(Lconfig, model, pars, valid)
-                s_test, L_test = eval_model(Lconfig, model, pars, test)
-                append!(p.loss_valid, L_valid)
-                append!(p.loss_test, L_test)
-
-                solution = Dict(
-                    :iter => iter,
-                    :model => deepcopy(cpu(model)),
-                    :train => Dict(:y => train[2], :s => cpu(s_train)),
-                    :valid => Dict(:y => valid[2], :s => cpu(s_valid)),
-                    :test => Dict(:y => test[2], :s => cpu(s_test)),
-                    :loss_train => p.loss_train,
-                    :loss_valid => p.loss_valid,
-                    :loss_test => p.loss_test,
+            if mod(epoch, Tconfig.checkpoint_every) == 0 || epoch == Tconfig.epochs
+                solution = eval_model(
+                    p, epoch Lconfig, model, pars, train, valid, test;
+                    device
                 )
-                save_model(datadir(dir, "checkpoints", "solution_iter=$(iter).bson"), solution)
+                save_model(
+                    datadir(dir, "checkpoints", "solution_epoch=$(epoch).bson"),
+                    solution,
+                )
             end
             progress!(p)
         end

@@ -4,6 +4,7 @@ Base.@kwdef mutable struct Progress
     t_min::Float64 = 60
     iter::Int = 0
     iter_max::Int = 0
+    loss_batch::Vector{Float32} = Float32[]
     loss_train::Vector{Float32} = Float32[]
     loss_valid::Vector{Float32} = Float32[]
     loss_test::Vector{Float32} = Float32[]
@@ -60,6 +61,7 @@ function log_duration!(io, p::Progress)
 end
 
 function log_loss!(io, p::Progress)
+    isempty(p.loss_batch) || write(io, "⋅ Loss batch: $(p.loss_batch[end]) \n")
     isempty(p.loss_train) || write(io, "⋅ Loss train: $(p.loss_train[end]) \n")
     isempty(p.loss_valid) || write(io, "⋅ Loss valid: $(p.loss_valid[end]) \n")
     isempty(p.loss_test) || write(io, "⋅ Loss test: $(p.loss_test[end]) \n")

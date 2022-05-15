@@ -48,6 +48,8 @@ dir_string(x::Int64) = string(x)
 dir_string(x::Bool) = string(x)
 
 include("datasets.jl")
+include("filedataset.jl")
+include("batchloader.jl")
 include("losses.jl")
 include("models.jl")
 include("optimisers.jl")
