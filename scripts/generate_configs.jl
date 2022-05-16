@@ -6,49 +6,97 @@ using Experiments
 configsdir(args...) = projectdir("configs", args...)
 
 Lconfigs = LossConfig.([
-    AATP(threshold=PatMatType(1e-3), surrogate=Hinge()),
-    AATP(threshold=PatMatType(1e-4), surrogate=Hinge()),
-    AATP(threshold=PatMatType(1e-5), surrogate=Hinge()),
+    DeepTopPush(surrogate="Hinge"),
+    PatMatNP(τ=1e-3, surrogate="Hinge"),
+    PatMatNP(τ=1e-4, surrogate="Hinge"),
+    PatMatNP(τ=1e-5, surrogate="Hinge"),
     CrossEntropy(ϵ=0.5),
     CrossEntropy(ϵ=0.9),
     CrossEntropy(ϵ=0.99),
     CrossEntropy(ϵ=0.999),
 ])
-Oconfigs = [
-    OptConfig(type="ADAM", eta=1e-2),
-]
-Mconfig = ModelConfig(Linear())
+Oconfig = OptConfig(type="ADAM", eta=1e-2)
 
-# Partial data
-Dconfigs = [
-    DataConfig(; type="Nsf5_02", full_dataset = false, stego_ratio=1),
-    DataConfig(; type="Nsf5_02", full_dataset = false, stego_ratio=0.5),
-    DataConfig(; type="Nsf5_02", full_dataset = false, stego_ratio=0.1),
-]
-Tconfig_partial = TrainConfig(iters=1000, checkpoint_every=100)
+#-------------------------------------------------------------------------------------------
+# Nsf5 datasets
+#-------------------------------------------------------------------------------------------
+Mconfig = ModelConfig(Linear())
+Tconfig = TrainConfig(epochs=500, checkpoint_every=50)
+
+# Small data
+Dconfigs = DataConfig.((
+    Nsf5Small(payload=0.2, ratio=1),
+    Nsf5Small(payload=0.2, ratio=0.5),
+    Nsf5Small(payload=0.2, ratio=0.1),
+))
 
 i = 0
-for Dconfig in Dconfigs, Lconfig in Lconfigs, Oconfig in Oconfigs
+for Dconfig in Dconfigs, Lconfig in Lconfigs
     i += 1
-    d = make_dict(Lconfig, Mconfig, Dconfig, Oconfig, Tconfig_partial)
-    path = configsdir("partial", "config_$(lpad(i, 4, "0")).yaml")
+    d = make_dict(Lconfig, Mconfig, Dconfig, Oconfig, Tconfig)
+    path = configsdir("Nsf5Small", "config_$(lpad(i, 4, "0")).yaml")
     mkpath(dirname(path))
     save_config(path, d)
 end
 
 # Full data
-Dconfigs = [
-    DataConfig(; type="Nsf5_02", full_dataset = true, stego_ratio=1),
-    DataConfig(; type="Nsf5_02", full_dataset = true, stego_ratio=0.5),
-    DataConfig(; type="Nsf5_02", full_dataset = true, stego_ratio=0.1),
-]
-Tconfig_full = TrainConfig(iters=500, checkpoint_every=10)
+Dconfigs = DataConfig.((
+    Nsf5(payload=0.2, ratio=1),
+    Nsf5(payload=0.2, ratio=0.5),
+    Nsf5(payload=0.2, ratio=0.1),
+))
 
 i = 0
-for Dconfig in Dconfigs, Lconfig in Lconfigs, Oconfig in Oconfigs
+for Dconfig in Dconfigs, Lconfig in Lconfigs
     i += 1
-    d = make_dict(Lconfig, Mconfig, Dconfig, Oconfig, Tconfig_full)
-    path = configsdir("full", "config_$(lpad(i, 4, "0")).yaml")
+    d = make_dict(Lconfig, Mconfig, Dconfig, Oconfig, Tconfig)
+    path = configsdir("Nsf5", "config_$(lpad(i, 4, "0")).yaml")
+    mkpath(dirname(path))
+    save_config(path, d)
+end
+
+#-------------------------------------------------------------------------------------------
+# JMiPOD datasets
+#-------------------------------------------------------------------------------------------
+Mconfig = ModelConfig(EfficientNet(pretrained = false, type = "b0"))
+Tconfig = TrainConfig(
+    epochs=100,
+    checkpoint_every=10,
+    buffer = true,
+    batch_size = 256,
+    batch_neg = 128,
+    batch_pos = 128,
+    device = "GPU",
+)
+
+# Small data
+Dconfigs = DataConfig.((
+    JMiPODSmall(payload=0.4, ratio=1),
+    JMiPODSmall(payload=0.4, ratio=0.5),
+    JMiPODSmall(payload=0.4, ratio=0.1),
+))
+
+i = 0
+for Dconfig in Dconfigs, Lconfig in Lconfigs
+    i += 1
+    d = make_dict(Lconfig, Mconfig, Dconfig, Oconfig, Tconfig)
+    path = configsdir("JMiPODSmall", "config_$(lpad(i, 4, "0")).yaml")
+    mkpath(dirname(path))
+    save_config(path, d)
+end
+
+# Full data
+Dconfigs = DataConfig.((
+    JMiPOD(payload=0.4, ratio=1),
+    JMiPOD(payload=0.4, ratio=0.5),
+    JMiPOD(payload=0.4, ratio=0.1),
+))
+
+i = 0
+for Dconfig in Dconfigs, Lconfig in Lconfigs
+    i += 1
+    d = make_dict(Lconfig, Mconfig, Dconfig, Oconfig, Tconfig)
+    path = configsdir("JMiPOD", "config_$(lpad(i, 4, "0")).yaml")
     mkpath(dirname(path))
     save_config(path, d)
 end
