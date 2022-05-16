@@ -49,6 +49,11 @@ end
     surrogate::String = "Hinge"
 end
 
+function Base.string(l::DeepTopPush)
+    vals = dir_string.((l.λ, l.surrogate))
+    return "DeepTopPush($(join(vals, ", ")))"
+end
+
 function loss(o::DeepTopPush, y, s::AbstractArray{T}, pars) where {T}
     l = surrogate(o.surrogate, 1)
     aatp = AccuracyAtTop.DeepTopPush()
