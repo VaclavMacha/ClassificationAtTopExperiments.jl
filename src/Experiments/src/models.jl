@@ -57,4 +57,6 @@ end
 end
 
 Base.string(m::ModelConfig) = string(m.model)
-materialize(m::ModelConfig; kwargs...) = materialize(m.model; kwargs...)
+function materialize(d::DataConfig, m::ModelConfig; kwargs...)
+    return materialize(d.dataset, m.model; kwargs...)
+end

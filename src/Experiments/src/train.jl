@@ -89,12 +89,14 @@ function eval_model(
     batch_size = 1000,
 )
     x, y = data
-    batch_size = batch_size == 0 ? length(y) : batch_size
-    s = zeros(Float32, 1, length(y))
-
-    for inds in partition(1:length(y), batch_size)
-        xi, yi = getobs_threads(data, inds)
-        s[1, inds] .= cpu(model(device(batch(xi))))[:]
+    if batch_size == 0
+        s = cpu(model(device(x)))
+    else
+        s = zeros(Float32, 1, length(y))
+        for inds in partition(1:length(y), batch_size)
+            xi, = getobs_threads(data, inds)
+            s[1, inds] .= cpu(model(device(batch(xi))))[:]
+        end
     end
     return s, loss(Lconfig, y, s, pars)
 end
@@ -195,13 +197,14 @@ function run_experiments(
         device = materialize(Tconfig)
         train, valid, test = load(Dconfig)
         batches = create_batches(Tconfig, train; device)
-        model, pars = materialize(Dconfig.dataset, Mconfig; device)
+        model, pars = materialize(Dconfig, Mconfig; device)
         optimiser = materialize(Oconfig)
         p = Progress(;
             iter_max = Tconfig.epochs*length(batches),
         )
 
         # initial state
+        @info "Computing initial checkpoint"
         solution = eval_model(
             p, 0, Lconfig, model, pars, train, valid, test;
             device, batch_size = Tconfig.batch_size
