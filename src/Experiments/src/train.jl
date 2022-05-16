@@ -195,7 +195,7 @@ function run_experiments(
         device = materialize(Tconfig)
         train, valid, test = load(Dconfig)
         batches = create_batches(Tconfig, train; device)
-        model, pars = materialize(Mconfig; device)
+        model, pars = materialize(Dconfig.dataset, Mconfig; device)
         optimiser = materialize(Oconfig)
         p = Progress(;
             iter_max = Tconfig.epochs*length(batches),
