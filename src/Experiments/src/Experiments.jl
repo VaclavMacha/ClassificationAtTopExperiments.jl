@@ -40,8 +40,8 @@ export JMiPODSmall
 
 export LossConfig
 export CrossEntropy
-export AATP
-export Hinge, Quadratic, PatMatType, TopPushType
+export PatMatNP
+export DeepTopPush
 
 export ModelConfig
 export Linear
