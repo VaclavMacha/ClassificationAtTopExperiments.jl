@@ -1,9 +1,9 @@
 #!/usr/bin/env sh
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --cpus-per-task=10
+#SBATCH --cpus-per-task=16
 #=
-export JULIA_NUM_THREADS=20
+export JULIA_NUM_THREADS=32
 
 srun --unbuffer julia --color=no --startup-file=no "${BASH_SOURCE[0]}" "$@"
 exit

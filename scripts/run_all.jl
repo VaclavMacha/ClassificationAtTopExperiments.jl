@@ -13,16 +13,32 @@ log_dir(args...) = projectdir("logs", args...)
 
 sbatch_array(
     scriptsdir("run_model.jl"),
-    configs_dir("partial");
-    logdir=log_dir(),
-    partition="cpu",
+    configs_dir("Nsf5Small");
+    logdir=log_dir("Nsf5Small"),
+    partition=("cpu", "amd"),
     mem="100G"
 ) |> run
 
 sbatch_array(
     scriptsdir("run_model.jl"),
-    configs_dir("full");
-    logdir=log_dir(),
+    configs_dir("Nsf5");
+    logdir=log_dir("Nsf5"),
     partition="amdextralong",
     mem="1000G"
+) |> run
+
+sbatch_array(
+    scriptsdir("run_model.jl"),
+    configs_dir("JMiPODSmall");
+    logdir=log_dir("JMiPODSmall"),
+    partition="amdgpu"
+    mem="100G"
+) |> run
+
+sbatch_array(
+    scriptsdir("run_model.jl"),
+    configs_dir("JMiPOD");
+    logdir=log_dir("JMiPOD"),
+    partition="amdgpuextralong"
+    mem="100G"
 ) |> run
