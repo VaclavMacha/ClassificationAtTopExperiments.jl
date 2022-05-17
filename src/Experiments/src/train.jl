@@ -58,8 +58,8 @@ function make_dict(
     d = merge(
         to_dict(Lconfig, YAMLStyle),
         to_dict(Mconfig, YAMLStyle),
+        to_dict(Dconfig, YAMLStyle),
     )
-    d["dataset"] = to_dict(Dconfig, YAMLStyle)
     d["optimiser"] = to_dict(Oconfig, YAMLStyle)
     d["training"] = to_dict(Tconfig, YAMLStyle)
 

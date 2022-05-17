@@ -63,9 +63,9 @@ Tconfig = TrainConfig(
     epochs=100,
     checkpoint_every=10,
     buffer = true,
-    batch_size = 256,
-    batch_neg = 128,
-    batch_pos = 128,
+    batch_size = 64,
+    batch_neg = 32,
+    batch_pos = 32,
     device = "GPU",
 )
 
