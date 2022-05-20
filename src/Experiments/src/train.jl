@@ -4,6 +4,7 @@
     buffer::Bool = false
     epochs::Int = 1000
     checkpoint_every::Int = 100
+    eval_every::Int = 100
     batch_size::Int = 0
     batch_pos::Int = 0
     batch_neg::Int = 0
@@ -20,6 +21,7 @@ function Base.string(o::TrainConfig)
         o.buffer,
         o.epochs,
         o.checkpoint_every,
+        o.eval_every,
         o.batch_size,
         o.batch_pos,
         o.batch_neg,
@@ -145,7 +147,6 @@ function eval_model(
 
     return Dict(
         :epoch => epoch,
-        :model => deepcopy(cpu(model)),
         :train => Dict(:y => train[2], :s => cpu(s_train)),
         :valid => Dict(:y => valid[2], :s => cpu(s_valid)),
         :test => Dict(:y => test[2], :s => cpu(s_test)),
@@ -210,7 +211,11 @@ function run_experiments(
             device, batch_size = Tconfig.batch_size
         )
         save_model(
-            datadir(dir, "checkpoints", "solution_epoch=0.bson"),
+            datadir(dir, "checkpoints", "model_epoch=0.bson"),
+            Dict(:model => deepcopy(cpu(model))),
+        )
+        save_model(
+            datadir(dir, "checkpoints", "state_epoch=0.bson"),
             solution,
         )
 
@@ -241,19 +246,26 @@ function run_experiments(
 
             # checkpoint
             if mod(epoch, Tconfig.checkpoint_every) == 0 || epoch == Tconfig.epochs
+                save_model(
+                    datadir(dir, "checkpoints", "model_epoch=$(epoch).bson"),
+                    Dict(:model => deepcopy(cpu(model))),
+                )
+            end
+            if mod(epoch, Tconfig.eval_every) == 0 || epoch == Tconfig.epochs
                 solution = eval_model(
                     p, epoch, Lconfig, model, pars, train, valid, test;
                     device
                 )
                 save_model(
-                    datadir(dir, "checkpoints", "solution_epoch=$(epoch).bson"),
+                    datadir(dir, "checkpoints", "state_epoch=$(epoch).bson"),
                     solution,
                 )
             end
         end
         @info "Saving final solution..."
         if !isempty(solution)
-            save_model(datadir(dir, "solution.bson"), solution)
+            save_model(datadir(dir, "model.bson"), Dict(:model => deepcopy(cpu(model))))
+            save_model(datadir(dir, "state.bson"), solution)
         end
         progress!(p; training=false, force=true)
     end
