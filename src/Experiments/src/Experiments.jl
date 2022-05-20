@@ -7,7 +7,7 @@ using CSV
 using Dates
 using DataFrames
 using DrWatson
-using EfficientNet
+using EfficientNets
 using EvalMetrics
 using Flux
 using HDF5
@@ -45,7 +45,7 @@ export DeepTopPush
 
 export ModelConfig
 export Linear
-export EfficientNet
+export EfficientNets
 
 export OptConfig
 export TrainConfig

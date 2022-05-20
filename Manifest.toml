@@ -146,9 +146,9 @@ version = "0.5.1"
 
 [[deps.ChainRules]]
 deps = ["ChainRulesCore", "Compat", "IrrationalConstants", "LinearAlgebra", "Random", "RealDot", "SparseArrays", "Statistics"]
-git-tree-sha1 = "ab656fb36197083c5817667e76cccd10d11f5c30"
+git-tree-sha1 = "de68815ccf15c7d3e3e3338f0bd3a8a0528f9b9f"
 uuid = "082447d4-558c-5d27-93f4-14fc19e9eca2"
-version = "1.32.0"
+version = "1.33.0"
 
 [[deps.ChainRulesCore]]
 deps = ["Compat", "LinearAlgebra", "SparseArrays"]
@@ -344,12 +344,12 @@ git-tree-sha1 = "3f3a2501fa7236e9b911e0f7a588c657e822bb6d"
 uuid = "5ae413db-bbd1-5e63-b57d-d24a61df00f5"
 version = "2.2.3+0"
 
-[[deps.EfficientNet]]
-deps = ["Downloads", "Flux", "Pickle"]
-git-tree-sha1 = "d7eba03cab959195bb13f131e36ac0964d955afb"
-repo-rev = "master"
-repo-url = "https://github.com/VaclavMacha/EfficientNet.jl"
-uuid = "8ae15c95-d670-4eca-a723-7364633ab054"
+[[deps.EfficientNets]]
+deps = ["DataDeps", "Flux", "Pickle"]
+git-tree-sha1 = "b956fef8c2118ff475301cc981f62fb8a965c166"
+repo-rev = "main"
+repo-url = "https://github.com/VaclavMacha/EfficientNets.jl"
+uuid = "cb7af4dd-7bed-4342-a916-86f413a32658"
 version = "0.1.0"
 
 [[deps.EvalMetrics]]
@@ -365,7 +365,7 @@ uuid = "2e619515-83b5-522b-bb60-26c02a35a201"
 version = "2.4.8+0"
 
 [[deps.Experiments]]
-deps = ["AccuracyAtTop", "AccuracyAtTopPrimal", "BSON", "CSV", "Configurations", "DataFrames", "Dates", "DrWatson", "EfficientNet", "EvalMetrics", "Flux", "HDF5", "ImageCore", "JpegTurbo", "Logging", "LoggingExtras", "MLDatasets", "MLUtils", "Plots", "ProgressMeter", "Random", "Statistics", "StatsBase", "YAML"]
+deps = ["AccuracyAtTop", "AccuracyAtTopPrimal", "BSON", "CSV", "Configurations", "DataFrames", "Dates", "DrWatson", "EfficientNets", "EvalMetrics", "Flux", "HDF5", "ImageCore", "JpegTurbo", "Logging", "LoggingExtras", "MLDatasets", "MLUtils", "Plots", "ProgressMeter", "Random", "Statistics", "StatsBase", "YAML"]
 path = "src/Experiments"
 uuid = "0ed54c3c-39b1-4574-89de-30629e1c012c"
 version = "0.1.0"
@@ -457,9 +457,9 @@ version = "0.4.2"
 
 [[deps.ForwardDiff]]
 deps = ["CommonSubexpressions", "DiffResults", "DiffRules", "LinearAlgebra", "LogExpFunctions", "NaNMath", "Preferences", "Printf", "Random", "SpecialFunctions", "StaticArrays"]
-git-tree-sha1 = "89cc49bf5819f0a10a7a3c38885e7c7ee048de57"
+git-tree-sha1 = "2f18915445b248731ec5db4e4a17e451020bf21e"
 uuid = "f6369f11-7733-5829-9624-2563aa707210"
-version = "0.10.29"
+version = "0.10.30"
 
 [[deps.FreeType2_jll]]
 deps = ["Artifacts", "Bzip2_jll", "JLLWrappers", "Libdl", "Pkg", "Zlib_jll"]
@@ -513,15 +513,15 @@ version = "0.15.2"
 
 [[deps.GR]]
 deps = ["Base64", "DelimitedFiles", "GR_jll", "HTTP", "JSON", "Libdl", "LinearAlgebra", "Pkg", "Printf", "Random", "RelocatableFolders", "Serialization", "Sockets", "Test", "UUIDs"]
-git-tree-sha1 = "af237c08bda486b74318c8070adb96efa6952530"
+git-tree-sha1 = "b316fd18f5bc025fedcb708332aecb3e13b9b453"
 uuid = "28b8d3ca-fb5f-59d9-8090-bfdbd6d07a71"
-version = "0.64.2"
+version = "0.64.3"
 
 [[deps.GR_jll]]
 deps = ["Artifacts", "Bzip2_jll", "Cairo_jll", "FFMPEG_jll", "Fontconfig_jll", "GLFW_jll", "JLLWrappers", "JpegTurbo_jll", "Libdl", "Libtiff_jll", "Pixman_jll", "Pkg", "Qt5Base_jll", "Zlib_jll", "libpng_jll"]
-git-tree-sha1 = "cd6efcf9dc746b06709df14e462f0a3fe0786b1e"
+git-tree-sha1 = "1e5490a51b4e9d07e8b04836f6008f46b48aaa87"
 uuid = "d2c73de3-f751-5644-a686-071e5b155ba9"
-version = "0.64.2+0"
+version = "0.64.3+0"
 
 [[deps.GZip]]
 deps = ["Libdl"]
@@ -700,9 +700,9 @@ version = "0.21.3"
 
 [[deps.JSON3]]
 deps = ["Dates", "Mmap", "Parsers", "StructTypes", "UUIDs"]
-git-tree-sha1 = "8c1f668b24d999fb47baf80436194fdccec65ad2"
+git-tree-sha1 = "fd6f0cae36f42525567108a42c1c674af2ac620d"
 uuid = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
-version = "1.9.4"
+version = "1.9.5"
 
 [[deps.JpegTurbo]]
 deps = ["CEnum", "FileIO", "ImageCore", "JpegTurbo_jll", "TOML"]
@@ -993,9 +993,9 @@ version = "0.4.0"
 
 [[deps.OffsetArrays]]
 deps = ["Adapt"]
-git-tree-sha1 = "aee446d0b3d5764e35289762f6a18e8ea041a592"
+git-tree-sha1 = "52addd9e91df8a6a5781e5c7640787525fd48056"
 uuid = "6fe1bfb0-de20-5000-8ca7-80f57d26f881"
-version = "1.11.0"
+version = "1.11.2"
 
 [[deps.Ogg_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -1299,9 +1299,9 @@ uuid = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 
 [[deps.SpecialFunctions]]
 deps = ["ChainRulesCore", "IrrationalConstants", "LogExpFunctions", "OpenLibm_jll", "OpenSpecFun_jll"]
-git-tree-sha1 = "5ba658aeecaaf96923dce0da9e703bd1fe7666f9"
+git-tree-sha1 = "bc40f042cfcc56230f781d92db71f0e21496dffd"
 uuid = "276daf66-3868-5448-9aa4-cd146d93841b"
-version = "2.1.4"
+version = "2.1.5"
 
 [[deps.SplittablesBase]]
 deps = ["Setfield", "Test"]
@@ -1317,9 +1317,9 @@ version = "0.1.1"
 
 [[deps.Static]]
 deps = ["IfElse"]
-git-tree-sha1 = "5309da1cdef03e95b73cd3251ac3a39f887da53e"
+git-tree-sha1 = "3a2a99b067090deb096edecec1dc291c5b4b31cb"
 uuid = "aedffcd0-7271-4cad-89d0-dc628f76c6d3"
-version = "0.6.4"
+version = "0.6.5"
 
 [[deps.StaticArrays]]
 deps = ["LinearAlgebra", "Random", "Statistics"]
