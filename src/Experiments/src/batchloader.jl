@@ -75,8 +75,8 @@ function eval_model(
 
     for (inds, batch) in BatchView((1:n, data); batchsize, partial=true)
         x, y = get_batch(batch, device)
-        S[inds] .= model(x)[:]
-        Y[inds] .= y[:]
+        S[inds] .= cpu(model(x))[:]
+        Y[inds] .= cpu(y)[:]
     end
     return Y, S
 end
