@@ -29,20 +29,23 @@ struct BatchLoader{D<:LabeledDataset}
 end
 
 function (loader::BatchLoader)()
-    if loader.batch_neg == loader.batch_pos == 0
+    batch_neg = loader.batch_neg
+    batch_pos = loader.batch_pos
+    batch_size = batch_neg + batch_pos
+    if batch_neg == batch_pos == 0
         return loader.data
     end
     inds = vcat(
-        sample(loader.neg, loader.batch_neg; replace=length(loader.neg) < loader.batch_neg),
-        sample(loader.pos, loader.batch_pos; replace=length(loader.pos) < loader.batch_pos),
+        sample(loader.neg, batch_neg; replace=length(loader.neg) < batch_neg),
+        sample(loader.pos, batch_pos; replace=length(loader.pos) < batch_pos),
     ) |> shuffle
 
     # buffer for aatp
     delayed_inds = loader.buffer()
-    filter!(i -> 1 <= i <= loader.batch_size, delayed_inds)
+    filter!(i -> 1 <= i <= batch_size, delayed_inds)
     k = length(delayed_inds)
-    if !isempty(delayed_inds) && k <= loader.batch_size
-        position = sample(1:loader.batch_size, k; replace=false)
+    if !isempty(delayed_inds) && k <= batch_size
+        position = sample(1:batch_size, k; replace=false)
         inds[position] .= loader.last_batch[delayed_inds]
     end
 
