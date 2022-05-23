@@ -23,7 +23,7 @@ function split_data(data, at, ratio)
     test = vcat(cover[3], stego[3])
 
     @info """
-    Dataset: all (cover/stego)
+    Dataset:
     ⋅ Train: $(length(train)) ($(stego_ratio(y[train]))% stego)
     ⋅ Valid: $(length(valid)) ($(stego_ratio(y[valid]))% stego)
     ⋅ Test:  $(length(test)) ($(stego_ratio(y[test]))% stego)
@@ -102,7 +102,7 @@ get_ids(::JMiPOD) = 1:47807
     at_valid::Float64 = 0.05
 end
 
-parse_type(::Val{:JMiPODSmall}) = JMiPOD
+parse_type(::Val{:JMiPODSmall}) = JMiPODSmall
 get_ids(::JMiPODSmall) = setdiff(1:111, 6:10:116)
 
 jmipoddir(args...) = datadir("dataset", "jmipod", args...)
