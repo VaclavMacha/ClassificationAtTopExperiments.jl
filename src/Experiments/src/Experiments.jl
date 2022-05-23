@@ -59,7 +59,7 @@ export load_checkpoint, save_checkpoint
 end
 
 parse_type(::Val{:TrainConfig}) = TrainConfig
-_exclude(::Type{TrainConfig}) = (:device, :force)
+_exclude(::Type{TrainConfig}) = (:checkpoint_every, :device, :force)
 
 # includes
 include("datasets.jl")
