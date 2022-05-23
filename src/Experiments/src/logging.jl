@@ -25,12 +25,12 @@ function progress!(p::Progress, iter, epoch)
     time() - p.t_last >= p.t_min || return
 
     all_iter = p.epoch_max * p.iter_max
-    finished_iter = p.iter + (epoch - 1) * p.iter_max
+    finished_iter = iter + (epoch - 1) * p.iter_max
 
     # generate log message
     io = IOBuffer()
     perc = round(Int, 100 * finished_iter / all_iter)
-    write(io, "Training in progress: $(perc)%")
+    write(io, "Training in progress: $(perc)% \n")
     write(io, "⋅ Epoch: $(epoch)/$(p.epoch_max) \n")
     write(io, "⋅ Iteration: $(iter)/$(p.iter_max) \n")
 
