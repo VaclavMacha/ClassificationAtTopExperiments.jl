@@ -52,10 +52,11 @@ end
 
 name(::T) where {T} = string(T.name.name)
 _exclude(::T) where {T} = tuple()
+_exclude_toml(::T) where {T} = tuple()
 
 # conversion to dicts
 function _dict(x::T) where {T}
-    exclude = _exclude(T)
+    exclude = _exclude_toml(T)
     ks = [key for key in fieldnames(T) if !in(key, exclude)]
     vals = [string(key) => toml_compat(getproperty(x, key)) for key in ks]
     return Dict("type" => name(x), vals...)
