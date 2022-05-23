@@ -21,7 +21,7 @@ Oconfig = OptConfig(type="ADAM", eta=1e-2)
 # Nsf5 datasets
 #-------------------------------------------------------------------------------------------
 Mconfig = ModelConfig(Linear())
-Tconfig = TrainConfig(epochs=500, checkpoint_every=50)
+Tconfig = TrainConfig(epochs=500, checkpoint_every=50, eval_every=50)
 
 # Small data
 Dconfigs = DataConfig.((
@@ -58,15 +58,16 @@ end
 #-------------------------------------------------------------------------------------------
 # JMiPOD datasets
 #-------------------------------------------------------------------------------------------
-Mconfig = ModelConfig(EfficientNet(pretrained = false, type = "b0"))
+Mconfig = ModelConfig(Efficientnet(pretrained = false))
 Tconfig = TrainConfig(
     epochs=100,
     checkpoint_every=10,
-    buffer = true,
-    batch_size = 64,
-    batch_neg = 32,
-    batch_pos = 32,
-    device = "GPU",
+    eval_every=10,
+    buffer=true,
+    batch_size=64,
+    batch_neg=32,
+    batch_pos=32,
+    device="GPU",
 )
 
 # Small data
