@@ -37,12 +37,12 @@ function progress!(p::Progress, iter, epoch)
     # duration
     p.t_last = time()
     elapsed = p.t_last - p.t_init
-    per_epoch = elapsed / (epoch - 1)
     per_iter = elapsed / finished_iter
+    per_epoch = p.iter_max * per_iter
     eta = per_iter * (all_iter - finished_iter)
 
     write(io, "⋅ Elapsed time: $(durationstring(elapsed)) \n")
-    epoch > 1 && write(io, "⋅ Time per epoch: $(speedstring(per_epoch)) \n")
+    write(io, "⋅ Time per epoch: $(speedstring(per_epoch)) \n")
     write(io, "⋅ Time per iter: $(speedstring(per_iter)) \n")
     write(io, "⋅ ETA: $(durationstring(eta)) \n")
 
