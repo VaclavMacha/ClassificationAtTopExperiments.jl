@@ -79,12 +79,6 @@ git-tree-sha1 = "aebf55e6d7795e02ca500a689d326ac979aaf89e"
 uuid = "9718e550-a3fa-408a-8086-8db961cd8217"
 version = "0.1.1"
 
-[[deps.BinDeps]]
-deps = ["Libdl", "Pkg", "SHA", "URIParser", "Unicode"]
-git-tree-sha1 = "1289b57e8cf019aede076edab0587eb9644175bd"
-uuid = "9e28174c-4ba2-5203-b857-d8d62c4213ee"
-version = "1.0.2"
-
 [[deps.BinaryProvider]]
 deps = ["Libdl", "Logging", "SHA"]
 git-tree-sha1 = "ecdec412a9abc8db54c0efc5548c64dfce072058"
@@ -134,9 +128,9 @@ version = "0.5.1"
 
 [[deps.ChainRules]]
 deps = ["ChainRulesCore", "Compat", "IrrationalConstants", "LinearAlgebra", "Random", "RealDot", "SparseArrays", "Statistics"]
-git-tree-sha1 = "de68815ccf15c7d3e3e3338f0bd3a8a0528f9b9f"
+git-tree-sha1 = "c03a0bc97fb045e417fe35a4533e6135b59babdc"
 uuid = "082447d4-558c-5d27-93f4-14fc19e9eca2"
-version = "1.33.0"
+version = "1.34.0"
 
 [[deps.ChainRulesCore]]
 deps = ["Compat", "LinearAlgebra", "SparseArrays"]
@@ -170,9 +164,9 @@ version = "0.11.2"
 
 [[deps.ColorVectorSpace]]
 deps = ["ColorTypes", "FixedPointNumbers", "LinearAlgebra", "SpecialFunctions", "Statistics", "TensorCore"]
-git-tree-sha1 = "3f1f500312161f1ae067abe07d13b40f78f32e07"
+git-tree-sha1 = "d08c20eef1f2cbc6e60fd3612ac4340b89fea322"
 uuid = "c3611d14-8923-5661-9e6a-0046d554d3a4"
-version = "0.9.8"
+version = "0.9.9"
 
 [[deps.Colors]]
 deps = ["ColorTypes", "FixedPointNumbers", "Reexport"]
@@ -332,12 +326,12 @@ git-tree-sha1 = "3f3a2501fa7236e9b911e0f7a588c657e822bb6d"
 uuid = "5ae413db-bbd1-5e63-b57d-d24a61df00f5"
 version = "2.2.3+0"
 
-[[deps.EfficientNets]]
-deps = ["DataDeps", "Flux", "Pickle"]
-git-tree-sha1 = "b956fef8c2118ff475301cc981f62fb8a965c166"
-repo-rev = "main"
-repo-url = "https://github.com/VaclavMacha/EfficientNets.jl"
-uuid = "cb7af4dd-7bed-4342-a916-86f413a32658"
+[[deps.EfficientNet]]
+deps = ["Downloads", "Flux", "Pickle"]
+git-tree-sha1 = "d70a2f9e9b771a744f23429fb005091d36bedc48"
+repo-rev = "master"
+repo-url = "https://github.com/VaclavMacha/EfficientNet.jl"
+uuid = "8ae15c95-d670-4eca-a723-7364633ab054"
 version = "0.1.0"
 
 [[deps.EvalMetrics]]
@@ -583,11 +577,23 @@ git-tree-sha1 = "debdd00ffef04665ccbb3e150747a77560e8fad1"
 uuid = "615f187c-cbe4-4ef1-ba3b-2fcf58d6d173"
 version = "0.1.1"
 
+[[deps.ImageBase]]
+deps = ["ImageCore", "Reexport"]
+git-tree-sha1 = "b51bb8cae22c66d0f6357e3bcb6363145ef20835"
+uuid = "c817782e-172a-44cc-b673-b171935fbb9e"
+version = "0.1.5"
+
 [[deps.ImageCore]]
 deps = ["AbstractFFTs", "ColorVectorSpace", "Colors", "FixedPointNumbers", "Graphics", "MappedArrays", "MosaicViews", "OffsetArrays", "PaddedViews", "Reexport"]
 git-tree-sha1 = "9a5c62f231e5bba35695a20988fc7cd6de7eeb5a"
 uuid = "a09fc81d-aa75-5fe9-8630-4744c3626534"
 version = "0.9.3"
+
+[[deps.ImageShow]]
+deps = ["Base64", "FileIO", "ImageBase", "ImageCore", "OffsetArrays", "StackViews"]
+git-tree-sha1 = "b563cf9ae75a635592fc73d3eb78b86220e55bd8"
+uuid = "4e3cecfd-b093-5904-9786-8bbb286a6a31"
+version = "0.3.6"
 
 [[deps.IniFile]]
 git-tree-sha1 = "f550e6e32074c939295eb5ea6de31849ac2c9625"
@@ -728,6 +734,11 @@ version = "0.15.15"
 deps = ["Artifacts", "Pkg"]
 uuid = "4af54fe1-eca0-43a8-85a7-787d91b784e3"
 
+[[deps.LazyModules]]
+git-tree-sha1 = "f4d24f461dacac28dcd1f63ebd88a8d9d0799389"
+uuid = "8cdb02fc-e678-4876-92c5-9defec4f444e"
+version = "0.3.0"
+
 [[deps.LibCURL]]
 deps = ["LibCURL_jll", "MozillaCACerts_jll"]
 uuid = "b27032c2-a3e7-50c8-80cd-2d36dbcbfd21"
@@ -821,10 +832,10 @@ uuid = "23992714-dd62-5051-b70f-ba57cb901cac"
 version = "0.10.3"
 
 [[deps.MLDatasets]]
-deps = ["BinDeps", "CSV", "ColorTypes", "DataDeps", "DataFrames", "DelimitedFiles", "FileIO", "FixedPointNumbers", "GZip", "Glob", "HDF5", "ImageCore", "JLD2", "JSON3", "MAT", "MLUtils", "NPZ", "Pickle", "Requires", "SparseArrays", "Tables"]
-git-tree-sha1 = "9f91d9b31f3c8ac90631f41502de08ca232200fc"
+deps = ["CSV", "DataDeps", "DataFrames", "DelimitedFiles", "FileIO", "FixedPointNumbers", "GZip", "Glob", "HDF5", "ImageShow", "JLD2", "JSON3", "LazyModules", "MAT", "MLUtils", "NPZ", "Pickle", "Requires", "SparseArrays", "Tables"]
+git-tree-sha1 = "3b41762c37b574c98e93f9b128961facafd52015"
 uuid = "eb30cadb-4394-5ae3-aed4-317e484a6458"
-version = "0.6.0"
+version = "0.7.1"
 
 [[deps.MLStyle]]
 git-tree-sha1 = "e49789e5eb7b2d5577aaea395bfcac769df64bb8"
@@ -899,9 +910,9 @@ version = "0.8.5"
 
 [[deps.NNlibCUDA]]
 deps = ["CUDA", "LinearAlgebra", "NNlib", "Random", "Statistics"]
-git-tree-sha1 = "0d18b4c80a92a00d3d96e8f9677511a7422a946e"
+git-tree-sha1 = "e161b835c6aa9e2339c1e72c3d4e39891eac7a4f"
 uuid = "a00861dc-f156-4864-bf3c-e6376f28a68d"
-version = "0.2.2"
+version = "0.2.3"
 
 [[deps.NPZ]]
 deps = ["Compat", "FileIO", "ZipFile"]
@@ -1337,12 +1348,6 @@ version = "0.4.73"
 git-tree-sha1 = "3c712976c47707ff893cf6ba4354aa14db1d8938"
 uuid = "9d95972d-f1c8-5527-a6e0-b4b365fa01f6"
 version = "1.3.0"
-
-[[deps.URIParser]]
-deps = ["Unicode"]
-git-tree-sha1 = "53a9f49546b8d2dd2e688d216421d050c9a31d0d"
-uuid = "30578b45-9adc-5946-b283-645ec420af67"
-version = "0.4.1"
 
 [[deps.URIs]]
 git-tree-sha1 = "97bbe755a53fe859669cd907f2d96aee8d2c1355"

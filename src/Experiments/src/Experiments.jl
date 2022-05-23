@@ -7,7 +7,6 @@ using CSV
 using Dates
 using DataFrames
 using DrWatson
-using EfficientNets
 using EvalMetrics
 using Flux
 using HDF5
@@ -16,6 +15,7 @@ using JpegTurbo
 using Logging
 using LoggingExtras
 using MLUtils
+using MLDatasets
 using Plots
 using Random
 using Statistics
@@ -23,6 +23,7 @@ using StatsBase
 using YAML
 
 import AccuracyAtTop
+import EfficientNet
 
 using Base.Iterators: partition
 using Flux.Losses: logitbinarycrossentropy
@@ -45,7 +46,7 @@ export DeepTopPush
 
 export ModelConfig
 export Linear
-export EfficientNets
+export Efficientnet
 
 export OptConfig
 export TrainConfig

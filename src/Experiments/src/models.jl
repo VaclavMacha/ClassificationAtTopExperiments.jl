@@ -30,27 +30,21 @@ function materialize(::AbstractJMiPOD, m::Linear; device=identity)
 end
 
 # Efficient net
-@option "EffNet" struct EffNet <: ModelType
+@option "Efficientnet" struct Efficientnet <: ModelType
     pretrained = false
-    type = "b0"
 end
 
-Base.string(m::EffNet) = "EffNet($(m.pretrained), $(m.type))"
+Base.string(m::Efficientnet) = "Efficientnet($(m.pretrained))"
 
-function materialize(::AbstractJMiPOD, m::EfficientNet; device=identity)
-    if m.type == "b0"
-        T = B0
-    else
-        error("not supported")
-    end
+function materialize(::AbstractJMiPOD, m::Efficientnet; device=identity)
     if m.pretrained
         error("pretrained model not available")
     else
         @info "Generating new network"
-        model = EfficientNet(
-            T;
-            classes=1,
-            channels=3
+        model = EfficientNet.EffNet(
+            "efficientnet-b0";
+            n_classes=1,
+            in_channels=3
         ) |> device
     end
     return model, Flux.params(model)
@@ -58,7 +52,7 @@ end
 
 # ModelConfig
 @option struct ModelConfig
-    model::Union{Linear,EffNet}
+    model::Union{Linear,Efficientnet}
 end
 
 Base.string(m::ModelConfig) = string(m.model)
