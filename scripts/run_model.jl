@@ -3,6 +3,7 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=16
 #=
+
 export JULIA_NUM_THREADS=32
 
 srun --unbuffer julia --color=no --startup-file=no "${BASH_SOURCE[0]}" "$@"
@@ -27,9 +28,10 @@ sleep(s)
 
 using DrWatson
 quickactivate(
-    "/home/machava2/projects/SteganographyExperiments.jl/scripts/run_model.jl", "SteganographyExperiments.jl",
+    "/home/machava2/projects/SteganographyExperiments.jl",
+    "SteganographyExperiments.jl",
 )
 
 using Experiments
 
-run_experiments(path)
+load_or_run(path)

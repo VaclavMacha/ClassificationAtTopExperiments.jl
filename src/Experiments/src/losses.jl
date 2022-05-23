@@ -1,20 +1,26 @@
 abstract type LossType end
 
 sqsum(x) = sum(abs2, x)
-loss(o::LossType, x, y, model, pars) = loss(o, y, model(x), pars)
+aggregation(y, s, ϵ=0.5f0) = mean(ϵ .* y .* s .+ (1 - ϵ) .* (1 .- y) .* s)
 
 # CrossEntropy
-@option "CrossEntropy" struct CrossEntropy <: LossType
+@kwdef struct CrossEntropy <: LossType
     λ::Float64 = 0
     ϵ::Float64 = 0.5
 end
 
-Base.string(o::CrossEntropy) = "CrossEntropy($(dir_string(o.λ)), $(dir_string(o.ϵ)))"
+parse_type(::Val{:CrossEntropy}) = CrossEntropy
 
-function loss(o::CrossEntropy, y, s::AbstractArray{T}, pars) where {T}
-    ϵ = T(o.ϵ)
-    agg = s -> mean(ϵ .* y .* s .+ (1 - ϵ) .* (1 .- y) .* s)
-    return T(o.λ) * sum(sqsum, pars) + logitbinarycrossentropy(s, y; agg)
+function materialize(o::CrossEntropy)
+    ϵ = Float32(o.ϵ)
+    λ = Float32(o.λ)
+
+    loss(x, y, model, pars) = loss(y, model(x), pars)
+
+    function loss(y, s::AbstractArray, pars)
+        λ * sum(sqsum, pars) + logitbinarycrossentropy(s, y; agg=s -> aggregation(y, s, ϵ))
+    end
+    return loss
 end
 
 # surrogates
@@ -23,48 +29,49 @@ surrogate(::Val{:Hinge}, ϑ=1) = x -> hinge(x, ϑ)
 surrogate(::Val{:Quadratic}, ϑ=1) = x -> quadratic(x, ϑ)
 
 # PatMatNP
-@option "PatMatNP" struct PatMatNP
+@kwdef struct PatMatNP
     τ::Float64 = 0.01
     λ::Float64 = 0
     surrogate::String = "Hinge"
     ϑ::Float64 = 1
 end
 
-function Base.string(l::PatMatNP)
-    vals = dir_string.((l.τ, l.λ, l.surrogate, l.ϑ))
-    return "PatMatNP($(join(vals, ", ")))"
-end
+parse_type(::Val{:PatMatNP}) = PatMatNP
 
-function loss(o::PatMatNP, y, s::AbstractArray{T}, pars) where {T}
+function materialize(o::PatMatNP)
+    τ = Float32(o.τ)
+    λ = Float32(o.λ)
+    ϑ = Float32(o.ϑ)
     l1 = surrogate(o.surrogate, 1)
-    l2 = surrogate(o.surrogate, T(o.ϑ))
-    t_type = AccuracyAtTopPrimal.PatMatNP(o.τ, l2)
-    t = AccuracyAtTopPrimal.threshold(t_type, y, s)
-    return T(o.λ) * sum(sqsum, pars) + AccuracyAtTopPrimal.fnr(y, s, t, l1)
+    l2 = surrogate(o.surrogate, ϑ)
+    aatp = AccuracyAtTopPrimal.PatMatNP(τ, l2)
+
+    loss(x, y, model, pars) = loss(y, model(x), pars)
+
+    function loss(y, s::AbstractArray, pars)
+        t = AccuracyAtTopPrimal.threshold(aatp, y, s)
+        λ * sum(sqsum, pars) + AccuracyAtTopPrimal.fnr(y, s, t, l1)
+    end
+    return loss
 end
 
 # DeepTopPush
-@option "DeepTopPush" struct DeepTopPush <: LossType
+@kwdef struct DeepTopPush <: LossType
     λ::Float64 = 0
     surrogate::String = "Hinge"
 end
 
-function Base.string(l::DeepTopPush)
-    vals = dir_string.((l.λ, l.surrogate))
-    return "DeepTopPush($(join(vals, ", ")))"
-end
+parse_type(::Val{:DeepTopPush}) = DeepTopPush
 
-function loss(o::DeepTopPush, y, s::AbstractArray{T}, pars) where {T}
+function materialize(o::DeepTopPush)
+    λ = Float32(o.λ)
     l = surrogate(o.surrogate, 1)
     aatp = AccuracyAtTop.DeepTopPush()
-    return T(o.λ) * sum(sqsum, pars) + AccuracyAtTop.objective(aatp, y, s; surrogate=l)
-end
 
-# LossConfig
-@option struct LossConfig
-    loss::Union{CrossEntropy,PatMatNP,DeepTopPush}
-end
+    loss(x, y, model, pars) = loss(y, model(x), pars)
 
-Base.string(m::LossConfig) = string(m.loss)
-loss(o::LossConfig, x, y, model, pars) = loss(o.loss, x, y, model, pars)
-loss(o::LossConfig, y, s, pars) = loss(o.loss, y, s, pars)
+    function loss(y, s::AbstractArray, pars)
+        λ * sum(sqsum, pars) + AccuracyAtTop.objective(aatp, y, s; surrogate=l)
+    end
+    return loss
+end

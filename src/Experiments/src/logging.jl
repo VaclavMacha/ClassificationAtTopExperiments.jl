@@ -1,73 +1,3 @@
-Base.@kwdef mutable struct Progress
-    t_init::Float64 = time()
-    t_last::Float64 = time()
-    t_min::Float64 = 60
-    iter::Int = 0
-    iter_max::Int = 0
-    loss_batch::Vector{Float32} = Float32[]
-    loss_train::Vector{Float32} = Float32[]
-    loss_valid::Vector{Float32} = Float32[]
-    loss_test::Vector{Float32} = Float32[]
-end
-
-function progress!(p::Progress; training::Bool=true, force = false)
-    if training
-        p.iter += 1
-    end
-    if time() - p.t_last >= p.t_min || force
-        io = IOBuffer()
-        log_progress!(io, p)
-        log_duration!(io, p)
-        log_loss!(io, p)
-        @info String(take!(io))
-    end
-end
-
-function reset_time!(p::Progress)
-    p.t_init = time()
-    p.t_last = time()
-    return
-end
-
-function log_progress!(io, p::Progress)
-    iter = p.iter
-    iter_max = p.iter_max
-
-    if iter == 0
-        write(io, "Initialization: \n")
-    elseif iter == iter_max
-        write(io, "Training finished:  \n")
-    else
-        perc = round(Int, 100 * iter / iter_max)
-        write(io, "Training in progress: $(iter)/$(iter_max) ($(perc))% \n")
-    end
-    return
-end
-
-function log_duration!(io, p::Progress)
-    p.t_last = time()
-    elapsed = p.t_last - p.t_init
-    per_iter = elapsed / p.iter
-
-    write(io, "⋅ Elapsed time: $(durationstring(elapsed)) \n")
-    if 0 < p.iter
-        write(io, "⋅ Time per iter: $(speedstring(per_iter)) \n")
-    end
-    if 0 < p.iter < p.iter_max
-        eta = per_iter * (p.iter_max - p.iter)
-        write(io, "⋅ ETA: $(durationstring(eta)) \n")
-    end
-    return
-end
-
-function log_loss!(io, p::Progress)
-    isempty(p.loss_batch) || write(io, "⋅ Loss batch: $(p.loss_batch[end]) \n")
-    isempty(p.loss_train) || write(io, "⋅ Loss train: $(p.loss_train[end]) \n")
-    isempty(p.loss_valid) || write(io, "⋅ Loss valid: $(p.loss_valid[end]) \n")
-    isempty(p.loss_test) || write(io, "⋅ Loss test: $(p.loss_test[end]) \n")
-    return
-end
-
 function generate_logger(dir::AbstractString)
     fmt = "yyyy-mm-dd HH:MM:SS"
     return TeeLogger(
@@ -80,4 +10,57 @@ function generate_logger(dir::AbstractString)
         MinLevelLogger(FileLogger(joinpath(dir, "error.log")), Logging.Warn),
         global_logger()
     )
+end
+
+# progress
+@kwdef mutable struct Progress
+    t_init::Float64 = time()
+    t_last::Float64 = time()
+    t_min::Float64 = 60
+    epoch_max::Int = 0
+    iter_max::Int = 0
+end
+
+function progress!(p::Progress, iter, epoch)
+    time() - p.t_last >= p.t_min || return
+
+    all_iter = p.epoch_max * p.iter_max
+    finished_iter = p.iter + (epoch - 1) * p.iter_max
+
+    # generate log message
+    io = IOBuffer()
+    perc = round(Int, 100 * finished_iter / all_iter)
+    write(io, "Training in progress: $(perc)%")
+    write(io, "⋅ Epoch: $(epoch)/$(p.epoch_max) \n")
+    write(io, "⋅ Iteration: $(iter)/$(p.iter_max) \n")
+
+    # duration
+    p.t_last = time()
+    elapsed = p.t_last - p.t_init
+    per_epoch = elapsed / (epoch - 1)
+    per_iter = elapsed / finished_iter
+    eta = per_iter * (all_iter - finished_iter)
+
+    write(io, "⋅ Elapsed time: $(durationstring(elapsed)) \n")
+    write(io, "⋅ Time per epoch: $(speedstring(per_epoch)) \n")
+    write(io, "⋅ Time per iter: $(speedstring(per_iter)) \n")
+    write(io, "⋅ ETA: $(durationstring(eta)) \n")
+
+    # print to logger
+    @info String(take!(io))
+    return
+end
+
+function finish!(p::Progress)
+    p.t_last = time()
+    elapsed = p.t_last - p.t_init
+
+    # generate log message
+    io = IOBuffer()
+    write(io, "Training finished:  \n")
+    write(io, "⋅ Elapsed time: $(durationstring(elapsed)) \n")
+
+    # print to logger
+    @info String(take!(io))
+    return
 end

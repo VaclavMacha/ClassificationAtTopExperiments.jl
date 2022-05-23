@@ -1,16 +1,17 @@
-@option struct OptConfig
-    type::String = "Descent"
-    eta::Float64 = 0.01
-    decay_every::Int = 1
-    decay_step::Float64 = 1
-    decay_min::Float64 = 1e-6
+abstract type OptimiserType end
+
+@kwdef struct OptDescent <: OptimiserType
+    eta::Float64 = 0.1
 end
 
-function Base.string(o::OptConfig)
-    vals = dir_string.((o.eta, o.decay_every, o.decay_step, o.decay_min))
-    return "$(o.type)($(join(vals, ", ")))"
+materialize(o::OptDescent) = Descent(o.eta)
+parse_type(::Val{:OptDescent}) = OptDescent
+
+@kwdef struct OptADAM <: OptimiserType
+    eta::Float64 = 0.001
+    beta1::Float64 = 0.9
+    beta2::Float64 = 0.999
 end
 
-materialize(o::OptConfig) = materialize(Val(Symbol(o.type)), o)
-materialize(::Val{:Descent}, o::OptConfig) = Descent(Float32(o.eta))
-materialize(::Val{:ADAM}, o::OptConfig) = ADAM(Float32(o.eta))
+materialize(o::OptADAM) = ADAM(o.eta, (o.beta1, o.beta2))
+parse_type(::Val{:OptADAM}) = OptADAM

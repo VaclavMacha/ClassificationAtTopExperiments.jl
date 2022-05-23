@@ -1,78 +1,82 @@
-struct BatchLoader{A, B<:AbstractArray}
-    x::A
-    y::B
-    neg::Vector{Int}
-    pos::Vector{Int}
-    batch_size::Int
+struct BatchLoader{D<:LabeledDataset}
+    data::D
+    buffer
     batch_neg::Int
     batch_pos::Int
-    buffer::Bool
-    device
+    neg::Vector{Int}
+    pos::Vector{Int}
     last_batch::Vector{Int}
-    t_inds::Vector{Int}
-    ts::Vector{Float32}
-    position::Vector{Int}
 
     function BatchLoader(
-        x::A,
-        y::B;
-        buffer::Bool = false,
-        batch_neg = 16,
-        batch_pos = 16,
-        device = identity,
-        postprocess = identity
-    ) where {A, B<:AbstractArray}
+        data::LabeledDataset;
+        buffer = () -> Int[],
+        batch_neg::Integer = 0,
+        batch_pos::Integer = 0,
+    )
 
-        batch_size = batch_pos + batch_neg
+        y = vec(data.targets)
 
-        return new{A,B}(
-            x,
-            y,
-            findall(vec(y) .== 0),
-            findall(vec(y) .== 1),
-            batch_size,
+        return new{typeof(data)}(
+            data,
+            buffer,
             batch_neg,
             batch_pos,
-            buffer,
-            device,
-            sample(1:length(y), batch_size; replace = false),
-            Int[],
-            Float32[],
-            Int[],
+            findall(y .== 0),
+            findall(y .== 1),
+            rand(1:length(y), batch_neg + batch_pos),
         )
     end
 end
 
-function (b::BatchLoader)()
+function (loader::BatchLoader)()
+    if loader.batch_neg == loader.batch_pos == 0
+        return loader.data
+    end
     inds = vcat(
-        sample(b.neg, b.batch_neg; replace = length(b.neg) < b.batch_neg),
-        sample(b.pos, b.batch_pos; replace = length(b.pos) < b.batch_pos),
+        sample(loader.neg, loader.batch_neg; replace=length(loader.neg) < loader.batch_neg),
+        sample(loader.pos, loader.batch_pos; replace=length(loader.pos) < loader.batch_pos),
     ) |> shuffle
 
-    if b.buffer
-        buff_inds = AccuracyAtTop.buffer_inds()
-        filter!(i -> 1 <= i <= b.batch_size, buff_inds)
-        k = length(buff_inds)
-        if !isempty(buff_inds) && k <= b.batch_size
-            position = sample(1:b.batch_size, k; replace = false)
-            inds[position] .= b.last_batch[buff_inds]
-            append!(b.t_inds, b.last_batch[buff_inds])
-
-            # add position
-            deleteat!(b.position, 1:length(b.position))
-            append!(b.position, position)
-        end
+    # buffer for aatp
+    delayed_inds = loader.buffer()
+    filter!(i -> 1 <= i <= loader.batch_size, delayed_inds)
+    k = length(delayed_inds)
+    if !isempty(delayed_inds) && k <= loader.batch_size
+        position = sample(1:loader.batch_size, k; replace=false)
+        inds[position] .= loader.last_batch[delayed_inds]
     end
-    append!(b.ts, AccuracyAtTop.buffer_ts())
-    b.last_batch .= inds
-    x, y = getobs_threads((b.x, b.y), inds)
-    return b.device(batch(x)), b.device(Float32.(batch(y)))
+
+    # update last batch
+    loader.last_batch .= inds
+    return ObsView(loader.data, inds)
 end
 
-function getobs_threads(data, inds)
-    data_batch = Vector{Any}(undef, length(inds))
-    Threads.@threads for i in 1:length(inds)
-        data_batch[i] = getobs(data, inds[i])
+function get_batch(data, device = cpu)
+    data_batch = Vector{Any}(undef, length(data))
+    Threads.@threads for i in 1:length(data)
+        data_batch[i] = getobs(data, i)
     end
-    return first.(data_batch), last.(data_batch)
+
+    x = MLUtils.batch(first.(data_batch)) |> device
+    y = reshape(MLUtils.batch(last.(data_batch)), 1, :) |> device
+    return x, y
+end
+
+function eval_model(
+    data::LabeledDataset,
+    model,
+    batchsize,
+    device
+)
+
+    n = length(data)
+    S = zeros(Float32, 1, n)
+    Y = zeros(Bool, 1, n)
+
+    for (inds, batch) in BatchView((1:n, data); batchsize, partial=true)
+        x, y = get_batch(batch, device)
+        S[inds] .= model(x)[:]
+        Y[inds] .= y[:]
+    end
+    return Y, S
 end

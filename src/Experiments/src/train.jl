@@ -1,143 +1,147 @@
-@option struct TrainConfig
-    seed::Int = 1234
-    force::Bool = false
-    buffer::Bool = false
-    epochs::Int = 1000
-    checkpoint_every::Int = 100
-    eval_every::Int = 100
-    batch_size::Int = 0
-    batch_pos::Int = 0
-    batch_neg::Int = 0
-    device::String = "CPU"
-end
+load_checkpoint(path) = BSON.load(path, @__MODULE__)
+save_checkpoint(path, model) = BSON.bson(path, model)
 
-materialize(t::TrainConfig) = materialize(Val(Symbol(t.device)))
-materialize(::Val{:CPU}) = Flux.cpu
-materialize(::Val{:GPU}) = Flux.gpu
+load_or_run(path) = load_or_run(load_config(path)...)
 
-function Base.string(o::TrainConfig)
-    vals = dir_string.((
-        o.seed,
-        o.buffer,
-        o.epochs,
-        o.checkpoint_every,
-        o.eval_every,
-        o.batch_size,
-        o.batch_pos,
-        o.batch_neg,
-    ))
-    return "Train($(join(vals, ", ")))"
-end
-
-# Save directory
-function dir_name(
-    Lconfig::LossConfig,
-    Mconfig::ModelConfig,
-    Dconfig::DataConfig,
-    Oconfig::OptConfig,
-    Tconfig::TrainConfig,
+function load_or_run(
+    dataset::DatasetType,
+    model_type::ModelType,
+    loss_type::LossType,
+    opt_type::OptimiserType,
+    train_config::TrainConfig;
 )
 
-    return joinpath(
+    # Extract train config
+    seed = train_config.seed
+    force = train_config.force
+    epoch_max = train_config.epoch_max
+    checkpoint_every = train_config.checkpoint_every
+    batch_pos = train_config.batch_pos
+    batch_neg = train_config.batch_neg
+    device = train_config.device == "GPU" ? Flux.gpu : Flux.cpu
+
+    # Generate dir
+    dir = datadir(
         "results",
-        string.((Tconfig, Dconfig, Mconfig, Oconfig, Lconfig))...,
+        _string(dataset),
+        _string(train_config),
+        _string(opt_type),
+        _string(model_type),
+        _string(loss_type),
     )
-end
 
-# saving and loading model
-load_model(path) = BSON.load(path, @__MODULE__)
-save_model(path, model) = BSON.bson(path, model)
-
-# experiment
-function make_dict(
-    Lconfig::LossConfig,
-    Mconfig::ModelConfig,
-    Dconfig::DataConfig,
-    Oconfig::OptConfig,
-    Tconfig::TrainConfig,
-)
-
-    d = merge(
-        to_dict(Lconfig, YAMLStyle),
-        to_dict(Mconfig, YAMLStyle),
-        to_dict(Dconfig, YAMLStyle),
+    if isfile(joinpath(dir, "solution.bson")) && !force
+        return load_checkpoint(joinpath(dir, "solution.bson"))
+    end
+    write_config(
+        joinpath(dir, "config.toml"),
+        dataset, model_type, loss_type, opt_type, train_config
     )
-    d["optimiser"] = to_dict(Oconfig, YAMLStyle)
-    d["training"] = to_dict(Tconfig, YAMLStyle)
 
-    return d
-end
+    # Run
+    with_logger(logger) do
+        @info """
+        Initialization:
+        ⋅ Dir: $(dir)
+        ⋅ Dataset config: $(_string(dataset))
+        ⋅ Model config: $(_string(model_type))
+        ⋅ Loss config: $(_string(loss_type))
+        ⋅ Optimiser config: $(_string(opt_type))
+        """
 
-save_config(path, config) = YAML.write_file(path, config)
-load_config(path) = YAML.load_file(path; dicttype=Dict{String,Any})
+        # Initialization
+        mkpath(joinpath(dir, "checkpoints"))
+        Random.seed!(seed)
+        train, valid, test = load(dataset)
+        model = materialize(dataset, model_type) |> device
+        pars = Flux.params(model)
+        loss = materialize(loss_type)
+        opt = materialize(opt_type)
 
-function parse_config(path)
-    d = load_config(path)
-    return (
-        from_dict(LossConfig, Dict("loss" => d["loss"])),
-        from_dict(ModelConfig, Dict("model" => d["model"])),
-        from_dict(DataConfig, Dict("dataset" => d["dataset"])),
-        from_dict(OptConfig, d["optimiser"]),
-        from_dict(TrainConfig, d["training"]),
-    )
-end
+        # Batch loader
+        batch_size = batch_neg + batch_pos
+        loader = BatchLoader(
+            train;
+            buffer=isa(model_type, DeepTopPush) ? () -> Int[] : AccuracyAtTop.buffer_inds,
+            batch_neg,
+            batch_pos
+        )
+        iter_max = batch_size == 0 ? 1 : ceil(Int, length(train) / batch_size)
 
-function eval_model(
-    Lconfig,
-    model,
-    pars,
-    data;
-    device = identity,
-    batch_size = 1000,
-)
-    x, y = data
-    if batch_size == 0
-        s = cpu(model(device(x)))
-    else
-        s = zeros(Float32, 1, length(y))
-        for inds in partition(1:length(y), batch_size)
-            xi, = getobs_threads(data, inds)
-            s[1, inds] .= cpu(model(device(batch(xi))))[:]
+        # Initial state
+        history = Dict{Symbol,Any}()
+        solution = checkpoint!(
+            history,
+            train,
+            valid,
+            test,
+            model,
+            pars,
+            loss,
+            batch_size,
+            device,
+            0,
+            joinpath(dir, "checkpoints", "checkpoint_epoch=0.bson"),
+        )
+
+        # Progress logging
+        p = Progress(; epoch_max, iter_max)
+
+        # Training
+        for epoch in 1:epoch_max
+            for iter in 1:iter_max
+                # loading batch
+                x, y = get_batch(loader(), device)
+
+                # gradient step
+                grads = Flux.Zygote.gradient(pars) do
+                    loss(y, model(x), pars)
+                end
+                Flux.Optimise.update!(opt, pars, grads)
+                progress!(p, iter, epoch)
+            end
+
+            # checkpoint
+            if mod(epoch, checkpoint_every) == 0 || epoch == epoch_max
+                solution = checkpoint!(
+                    history,
+                    train,
+                    valid,
+                    test,
+                    model,
+                    pars,
+                    loss,
+                    batch_size,
+                    device,
+                    epoch,
+                    joinpath(dir, "checkpoints", "checkpoint_epoch=0.bson"),
+                )
+            end
         end
+        finished!(p)
+        save_checkpoint(joinpath(dir, "solution.bson"), solution)
     end
-    return s, loss(Lconfig, y, s, pars)
+    return solution
 end
 
-function create_batches(c::TrainConfig, train; device)
-    if c.batch_size == 0
-        return (train, )
-    end
-
-    loader = BatchLoader(train...; c.buffer, c.batch_neg, c.batch_pos, device)
-    iters = ceil(Int, length(train[2]) / c.batch_size)
-    return (loader() for _ in 1:iters)
-end
-
-run_experiments(path) = run_experiments(parse_config(path)...)
-
-function eval_model(
-    p::Progress,
-    epoch,
-    Lconfig,
-    model,
-    pars,
+function checkpoint!(
+    history,
     train,
     valid,
-    test;
-    kwargs...
+    test,
+    model,
+    pars,
+    loss,
+    batch_size,
+    device,
+    epoch,
+    path,
 )
-    tm1 = @timed begin
-        s_train, L_train = eval_model(Lconfig, model, pars, train; kwargs...)
-        append!(p.loss_train, L_train)
-    end
-    tm2 = @timed begin
-        s_valid, L_valid = eval_model(Lconfig, model, pars, valid; kwargs...)
-        append!(p.loss_valid, L_valid)
-    end
-    tm3 = @timed begin
-        s_test, L_test = eval_model(Lconfig, model, pars, test; kwargs...)
-        append!(p.loss_test, L_test)
-    end
+
+    tm1 = @timed y_train, s_train = eval_model(train, model, batch_size, device)
+    tm2 = @timed y_valid, s_valid = eval_model(valid, model, batch_size, device)
+    tm3 = @timed y_test, s_test = eval_model(test, model, batch_size, device)
+
     @info """
     Evaluation after epoch $(epoch):
     ⋅ Train: $(durationstring(tm1.time))
@@ -145,129 +149,24 @@ function eval_model(
     ⋅ Test: $(durationstring(tm3.time))
     """
 
-    return Dict(
+    loss_train = get!(history, :loss_train, Float32[])
+    loss_valid = get!(history, :loss_valid, Float32[])
+    loss_test = get!(history, :loss_test, Float32[])
+
+    append!(loss_train, loss(y_train, s_train, pars))
+    append!(loss_valid, loss(y_train, s_train, pars))
+    append!(loss_test, loss(y_train, s_train, pars))
+
+    solution = Dict(
+        :model => deepcopy(cpu(model)),
         :epoch => epoch,
-        :train => Dict(:y => train[2], :s => cpu(s_train)),
-        :valid => Dict(:y => valid[2], :s => cpu(s_valid)),
-        :test => Dict(:y => test[2], :s => cpu(s_test)),
-        :loss_batch => p.loss_batch,
-        :loss_train => p.loss_train,
-        :loss_valid => p.loss_valid,
-        :loss_test => p.loss_test,
+        :train => Dict(:y => cpu(y_train), :s => cpu(s_train)),
+        :valid => Dict(:y => cpu(y_valid), :s => cpu(s_valid)),
+        :test => Dict(:y => cpu(y_test), :s => cpu(s_test)),
+        :loss_train => loss_train,
+        :loss_valid => loss_valid,
+        :loss_test => loss_test,
     )
-end
-
-function run_experiments(
-    Lconfig::LossConfig,
-    Mconfig::ModelConfig,
-    Dconfig::DataConfig,
-    Oconfig::OptConfig,
-    Tconfig::TrainConfig,
-)
-
-    # check if exists
-    dir = dir_name(Lconfig, Mconfig, Dconfig, Oconfig, Tconfig)
-    if !Tconfig.force && isfile(datadir(dir, "solution.bson"))
-        return load_model(datadir(dir, "solution.bson"))
-    end
-
-    # logging initialization
-    mkpath(datadir(dir))
-    mkpath(datadir(dir, "checkpoints"))
-    logger = generate_logger(datadir(dir))
-
-    # run
-    solution = []
-    with_logger(logger) do
-        @info """
-        Initialization:
-        ⋅ Dir: $(datadir(dir))
-        ⋅ Loss config: $(string(Lconfig))
-        ⋅ Model config: $(string(Mconfig))
-        ⋅ Dataset config: $(string(Dconfig))
-        ⋅ Optimiser config: $(string(Oconfig))
-        ⋅ Train config: $(string(Tconfig))
-        """
-        save_config(
-            datadir(dir, "config.yaml"),
-            make_dict(Lconfig, Mconfig, Dconfig, Oconfig, Tconfig)
-        )
-
-        # initialization
-        Random.seed!(Tconfig.seed)
-        device = materialize(Tconfig)
-        train, valid, test = load(Dconfig)
-        batches = create_batches(Tconfig, train; device)
-        model, pars = materialize(Dconfig, Mconfig; device)
-        optimiser = materialize(Oconfig)
-        p = Progress(;
-            iter_max = Tconfig.epochs*length(batches),
-        )
-
-        # initial state
-        @info "Computing initial checkpoint"
-        solution = eval_model(
-            p, 0, Lconfig, model, pars, train, valid, test;
-            device, batch_size = Tconfig.batch_size
-        )
-        save_model(
-            datadir(dir, "checkpoints", "model_epoch=0.bson"),
-            Dict(:model => deepcopy(cpu(model))),
-        )
-        save_model(
-            datadir(dir, "checkpoints", "state_epoch=0.bson"),
-            solution,
-        )
-
-        # training loop
-        progress!(p; training=false, force=true)
-        reset_time!(p)
-        @info "Training in progress..."
-        for epoch in 1:Tconfig.epochs
-            if Oconfig.decay_step != 1 && mod(epoch, Oconfig.decay_every) == 0
-                optimiser.eta = max(
-                    Float32(optimiser.eta * Oconfig.decay_step),
-                    Float32(Oconfig.decay_min),
-                )
-            end
-
-            # gradient step
-            for batch in batches
-                x, y = device(batch)
-                local L_batch
-                grads = Flux.Zygote.gradient(pars) do
-                    L_batch = loss(Lconfig, y, model(x), pars)
-                    return L_batch
-                end
-                Flux.Optimise.update!(optimiser, pars, grads)
-                append!(p.loss_batch, L_batch)
-                progress!(p)
-            end
-
-            # checkpoint
-            if mod(epoch, Tconfig.checkpoint_every) == 0 || epoch == Tconfig.epochs
-                save_model(
-                    datadir(dir, "checkpoints", "model_epoch=$(epoch).bson"),
-                    Dict(:model => deepcopy(cpu(model))),
-                )
-            end
-            if mod(epoch, Tconfig.eval_every) == 0 || epoch == Tconfig.epochs
-                solution = eval_model(
-                    p, epoch, Lconfig, model, pars, train, valid, test;
-                    device
-                )
-                save_model(
-                    datadir(dir, "checkpoints", "state_epoch=$(epoch).bson"),
-                    solution,
-                )
-            end
-        end
-        @info "Saving final solution..."
-        if !isempty(solution)
-            save_model(datadir(dir, "model.bson"), Dict(:model => deepcopy(cpu(model))))
-            save_model(datadir(dir, "state.bson"), solution)
-        end
-        progress!(p; training=false, force=true)
-    end
+    save_checkpoint(path, solution)
     return solution
 end
