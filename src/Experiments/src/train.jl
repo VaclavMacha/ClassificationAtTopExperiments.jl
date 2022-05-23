@@ -139,17 +139,17 @@ function checkpoint!(
     epoch,
     path,
 )
-
+    @info "Train data evaluation ..."
     tm1 = @timed y_train, s_train = eval_model(train, model, batch_size, device)
-    tm2 = @timed y_valid, s_valid = eval_model(valid, model, batch_size, device)
-    tm3 = @timed y_test, s_test = eval_model(test, model, batch_size, device)
+    @info "Train data evaluation: $(durationstring(tm1.time))"
 
-    @info """
-    Evaluation after epoch $(epoch):
-    ⋅ Train: $(durationstring(tm1.time))
-    ⋅ Valid: $(durationstring(tm2.time))
-    ⋅ Test: $(durationstring(tm3.time))
-    """
+    @info "Valid data evaluation ..."
+    tm2 = @timed y_valid, s_valid = eval_model(valid, model, batch_size, device)
+    @info "Valid data evaluation: $(durationstring(tm2.time))"
+
+    @info "Test data evaluation ..."
+    tm3 = @timed y_test, s_test = eval_model(test, model, batch_size, device)
+    @info "Test data evaluation: $(durationstring(tm3.time))"
 
     loss_train = get!(history, :loss_train, Float32[])
     loss_valid = get!(history, :loss_valid, Float32[])
