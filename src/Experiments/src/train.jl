@@ -39,6 +39,7 @@ function load_or_run(
     )
 
     # Run
+    logger = generate_logger(dir)
     with_logger(logger) do
         @info """
         Initialization:
@@ -85,6 +86,7 @@ function load_or_run(
         )
 
         # Progress logging
+        @info "Start training..."
         p = Progress(; epoch_max, iter_max)
 
         # Training
