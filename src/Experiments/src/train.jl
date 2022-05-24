@@ -120,7 +120,7 @@ function load_or_run(
                 )
             end
         end
-        finished!(p)
+        finish!(p)
         save_checkpoint(joinpath(dir, "solution.bson"), solution)
     end
     return solution
