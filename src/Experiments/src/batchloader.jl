@@ -120,5 +120,5 @@ function eval_model!(
 
     x = batch.device(data.features)
     y = data.targets
-    return y, cpu(model(x))
+    return flux_shape(y), flux_shape(cpu(model(x)))
 end

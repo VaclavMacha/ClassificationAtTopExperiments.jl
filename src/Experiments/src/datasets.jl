@@ -5,6 +5,12 @@ struct LabeledDataset{F,T} <: SupervisedDataset
     targets::T
 end
 
+flux_shape(x) = x
+flux_shape(x::AbstractVector) = reshape(x, 1, :)
+function flux_shape(x::AbstractArray{T, 3}) where {T}
+    return reshape(x, size(x, 1), size(x, 2), 1, size(x, 3))
+end
+
 function _split_inds(inds, at::NTuple{2,AbstractFloat}, ratio::Real=1)
     train, valid, test = splitobs(inds; at, shuffle=true)
     if 0 < ratio < 1
@@ -31,6 +37,9 @@ function split_data(data, at, ratio)
     ⋅ Test:  $(length(test)) ($(stego_ratio(y[test]))% stego)
     """
     return (
+        LabeledDataset(flux_shape(obsview(x, train)), flux_shape(y[train])),
+        LabeledDataset(flux_shape(obsview(x, valid)), flux_shape(y[valid])),
+        LabeledDataset(flux_shape(obsview(x, test)), flux_shape(y[test])),
         LabeledDataset(obsview(x, train), reshape(y[train], 1, :)),
         LabeledDataset(obsview(x, valid), reshape(y[valid], 1, :)),
         LabeledDataset(obsview(x, test), reshape(y[test], 1, :)),
