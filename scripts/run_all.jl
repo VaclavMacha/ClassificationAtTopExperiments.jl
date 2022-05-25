@@ -15,7 +15,7 @@ sbatch_array(
     scriptsdir("run_model.jl"),
     configs_dir("Nsf5Small");
     logdir=log_dir("Nsf5Small"),
-    partition=("cpu", "amd"),
+    partition="amd",
     mem="100G"
 ) |> run
 
