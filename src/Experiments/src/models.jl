@@ -1,6 +1,8 @@
 abstract type ModelType end
 
+# ------------------------------------------------------------------------------------------
 # linear models
+# ------------------------------------------------------------------------------------------
 struct Linear <: ModelType end
 
 parse_type(::Val{:Linear}) = Linear
@@ -13,7 +15,9 @@ function materialize(::AbstractJMiPOD, m::Linear)
     return Chain(Flux.flatten, Dense(196608 => 1; bias=false))
 end
 
+# ------------------------------------------------------------------------------------------
 # Efficient net
+# ------------------------------------------------------------------------------------------
 abstract type AbstractEfficientNet <: ModelType end
 
 @kwdef struct EfficientNetB0 <: AbstractEfficientNet

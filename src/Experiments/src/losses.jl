@@ -3,7 +3,14 @@ abstract type LossType end
 sqsum(x) = sum(abs2, x)
 aggregation(y, s, ϵ=0.5f0) = mean(ϵ .* y .* s .+ (1 - ϵ) .* (1 .- y) .* s)
 
+# surrogates
+surrogate(name::String, args...) = surrogate(Val(Symbol(name)), args...)
+surrogate(::Val{:Hinge}, ϑ=1) = x -> AccuracyAtTopPrimal.hinge(x, ϑ)
+surrogate(::Val{:Quadratic}, ϑ=1) = x -> AccuracyAtTopPrimal.quadratic(x, ϑ)
+
+# ------------------------------------------------------------------------------------------
 # CrossEntropy
+# ------------------------------------------------------------------------------------------
 @kwdef struct CrossEntropy <: LossType
     λ::Float64 = 0
     ϵ::Float64 = 0.5
@@ -23,12 +30,9 @@ function materialize(o::CrossEntropy)
     return loss
 end
 
-# surrogates
-surrogate(name::String, args...) = surrogate(Val(Symbol(name)), args...)
-surrogate(::Val{:Hinge}, ϑ=1) = x -> hinge(x, ϑ)
-surrogate(::Val{:Quadratic}, ϑ=1) = x -> quadratic(x, ϑ)
-
+# ------------------------------------------------------------------------------------------
 # PatMatNP
+# ------------------------------------------------------------------------------------------
 @kwdef struct PatMatNP <: LossType
     τ::Float64 = 0.01
     λ::Float64 = 0
@@ -55,7 +59,9 @@ function materialize(o::PatMatNP)
     return loss
 end
 
+# ------------------------------------------------------------------------------------------
 # DeepTopPush
+# ------------------------------------------------------------------------------------------
 @kwdef struct DeepTopPush <: LossType
     λ::Float64 = 0
     surrogate::String = "Hinge"
