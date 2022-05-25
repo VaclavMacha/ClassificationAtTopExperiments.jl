@@ -71,7 +71,12 @@ function load_or_run(
             loader = () -> train
             iter_max = 1
         else
-            batch = Batch(device, obs_size(dataset)..., batch_size)
+            batch = Batch(
+                device,
+                obs_size(dataset)...,
+                batch_size;
+                use_threads = load_with_threads(dataset),
+            )
             loader = BatchLoader(
                 train;
                 buffer=isa(model_type, DeepTopPush) ? () -> Int[] : AccuracyAtTop.buffer_inds,

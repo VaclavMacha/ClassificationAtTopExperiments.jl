@@ -53,20 +53,21 @@ end
 
 struct Batch{F1,T1,F2,T2}
     device
+    use_threads
     x::F1
     y::T1
     x_device::F2
     y_device::T2
 end
 
-function Batch(device, shape::Int...)
+function Batch(device, shape::Int...; use_threads = false)
     x = zeros(Float32, shape...)
     y = zeros(Float32, 1, shape[end])
 
     if isa(device, typeof(cpu))
-        return Batch(device, x, y, nothing, nothing)
+        return Batch(device, use_threads, x, y, nothing, nothing)
     else
-        return Batch(device, x, y, device(x), device(y))
+        return Batch(device, use_threads, x, y, device(x), device(y))
     end
 end
 
@@ -75,17 +76,23 @@ Batch(device) = Batch(device, nothing, nothing, nothing, nothing)
 offset(x, i) = (i - 1) * prod(size(x)[1:end-1]) + 1
 
 function get_batch!(batch::Batch, data)
-    Threads.@threads for i in 1:length(data)
-        x, y = getobs(data, i)
-        copyto!(batch.x, offset(batch.x, i), x, 1, length(x))
-        copyto!(batch.y, offset(batch.y, i), y, 1, length(y))
+    if batch.use_threads
+        Threads.@threads for i in 1:length(data)
+            x, y = getobs(data, i)
+            copyto!(batch.x, offset(batch.x, i), x, 1, length(x))
+            copyto!(batch.y, offset(batch.y, i), y, 1, length(y))
+        end
+    else
+        x, y = getobs(data)
+        copyto!(batch.x, x)
+        copyto!(batch.y, y)
     end
     if !isnothing(batch.x_device)
         copyto!(batch.x_device, batch.x)
         copyto!(batch.y_device, batch.y)
         return batch.x_device, batch.y_device
     else
-        return batch.x, batch.y
+        return x, y
     end
 end
 

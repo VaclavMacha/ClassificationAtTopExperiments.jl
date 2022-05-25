@@ -1,5 +1,3 @@
-abstract type DatasetType end
-
 struct LabeledDataset{F,T} <: SupervisedDataset
     features::F
     targets::T
@@ -40,15 +38,44 @@ function split_data(data, at, ratio)
         LabeledDataset(flux_shape(obsview(x, train)), flux_shape(y[train])),
         LabeledDataset(flux_shape(obsview(x, valid)), flux_shape(y[valid])),
         LabeledDataset(flux_shape(obsview(x, test)), flux_shape(y[test])),
-        LabeledDataset(obsview(x, train), reshape(y[train], 1, :)),
-        LabeledDataset(obsview(x, valid), reshape(y[valid], 1, :)),
-        LabeledDataset(obsview(x, test), reshape(y[test], 1, :)),
+    )
+end
+
+_binarize(y::Real, pos_labels) = y in pos_labels
+binarize(y, pos_labels) = _binarize.(y, Ref(pos_labels))
+
+function split_data(train, test, at, pos_labels)
+    inds_train, inds_valid = splitobs(1:numobs(train); at, shuffle=true)
+
+    x_train = obsview(train.features, inds_train)
+    y_train = binarize(train.targets[inds_train], pos_labels)
+
+    x_valid = obsview(train.features, inds_valid)
+    y_valid = binarize(train.targets[inds_valid], pos_labels)
+
+    x_test = test.features
+    y_test = binarize(test.targets, pos_labels)
+
+    @info """
+    Dataset:
+    ⋅ Train: $(numobs(y_train))
+    ⋅ Valid: $(numobs(y_valid))
+    ⋅ Test:  $(numobs(y_test))
+    """
+    return (
+        LabeledDataset(flux_shape(x_train), flux_shape(y_train)),
+        LabeledDataset(flux_shape(x_valid), flux_shape(y_valid)),
+        LabeledDataset(flux_shape(x_test), flux_shape(y_test)),
     )
 end
 
 # ------------------------------------------------------------------------------------------
 # NSF5 datasets
 # ------------------------------------------------------------------------------------------
+abstract type DatasetType end
+
+load_with_threads(::DatasetType) = false
+
 abstract type AbstractNsf5 <: DatasetType end
 
 obs_size(::AbstractNsf5) = (22510,)
@@ -102,6 +129,8 @@ end
 # ------------------------------------------------------------------------------------------
 abstract type AbstractJMiPOD <: DatasetType end
 
+load_with_threads(::AbstractJMiPOD) = true
+
 obs_size(::AbstractJMiPOD) = (256, 256, 3)
 
 @kwdef struct JMiPOD <: AbstractJMiPOD
@@ -151,4 +180,95 @@ function load(d::AbstractJMiPOD)
     y = (1:length(x)) .> length(x_cover)
 
     return split_data((x, y), (d.at_train, d.at_valid), d.ratio)
+end
+
+# ------------------------------------------------------------------------------------------
+# Vision datasets from MLDatasets
+# ------------------------------------------------------------------------------------------
+abstract type AbstractVision <: DatasetType end
+
+function load(d::AbstractVision)
+    train = load_dataset(d, :train)
+    test = load_dataset(d, :test)
+    return split_data(train, test, d.at_train, d.pos_labels)
+end
+
+@kwdef struct MNIST <: AbstractVision
+    pos_labels::Vector{Int} = [0]
+    at_train::Float64 = 0.9
+end
+
+obs_size(::MNIST) = (28, 28, 1)
+parse_type(::Val{:MNIST}) = MNIST
+load_dataset(::MNIST, key::Symbol) = MLDatasets.MNIST(Float32, key)
+
+@kwdef struct FashionMNIST <: AbstractVision
+    pos_labels::Vector{Int} = [0]
+    at_train::Float64 = 0.9
+end
+
+obs_size(::FashionMNIST) = (28, 28, 1)
+parse_type(::Val{:FashionMNIST}) = FashionMNIST
+load_dataset(::FashionMNIST, key::Symbol) = MLDatasets.FashionMNIST(Float32, key)
+
+@kwdef struct CIFAR10 <: AbstractVision
+    pos_labels::Vector{Int} = [0]
+    at_train::Float64 = 0.9
+end
+
+obs_size(::CIFAR10) = (32, 32, 3)
+parse_type(::Val{:CIFAR10}) = CIFAR10
+load_dataset(::CIFAR10, key::Symbol) = MLDatasets.CIFAR10(Float32, key)
+
+@kwdef struct CIFAR20 <: AbstractVision
+    pos_labels::Vector{Int} = [0]
+    at_train::Float64 = 0.9
+end
+
+obs_size(::CIFAR20) = (32, 32, 3)
+parse_type(::Val{:CIFAR20}) = CIFAR100
+function load_dataset(::CIFAR20, key::Symbol)
+    data = MLDatasets.CIFAR100(Float32, key)
+    return LabeledDataset(data.features, data.targets.coarse)
+end
+
+@kwdef struct CIFAR100 <: AbstractVision
+    pos_labels::Vector{Int} = [0]
+    at_train::Float64 = 0.9
+end
+
+obs_size(::CIFAR100) = (32, 32, 3)
+parse_type(::Val{:CIFAR100}) = CIFAR100
+function load_dataset(::CIFAR100, key::Symbol)
+    data = MLDatasets.CIFAR100(Float32, key)
+    return LabeledDataset(data.features, data.targets.fine)
+end
+
+@kwdef struct SVHN2 <: AbstractVision
+    pos_labels::Vector{Int} = [0]
+    at_train::Float64 = 0.9
+end
+
+obs_size(::SVHN2) = (32, 32, 3)
+parse_type(::Val{:SVHN2}) = SVHN2
+load_dataset(::SVHN2, key::Symbol) = MLDatasets.SVHN2(Float32, key)
+
+@kwdef struct SVHN2Extra <: AbstractVision
+    pos_labels::Vector{Int} = [0]
+    at_train::Float64 = 0.9
+end
+
+obs_size(::SVHN2Extra) = (32, 32, 3)
+parse_type(::Val{:SVHN2Extra}) = SVHN2
+function  load_dataset(::SVHN2Extra, key::Symbol)
+    return if key == :train
+        d1 = MLDatasets.SVHN2(Float32, :train)
+        d2 = MLDatasets.SVHN2(Float32, :extra)
+
+        x = cat(d1.features, d2.features; dims = 4)
+        y = vcat(d1.targets, d2.targets)
+        return LabeledDataset(x, y)
+    else
+        MLDatasets.SVHN2(Float32, :test)
+    end
 end

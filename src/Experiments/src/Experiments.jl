@@ -9,7 +9,6 @@ using JpegTurbo
 using JSON3
 using Logging
 using LoggingExtras
-using MLDatasets
 using MLUtils
 using Random
 using Statistics
@@ -20,6 +19,7 @@ using TOML
 import AccuracyAtTopPrimal
 import AccuracyAtTop
 import EfficientNet
+import MLDatasets
 
 using Base: @kwdef
 using Flux.Losses: logitbinarycrossentropy
@@ -27,10 +27,11 @@ using MLDatasets: SupervisedDataset, FileDataset
 using ProgressMeter: durationstring, speedstring
 
 # exports
-export Nsf5
-export Nsf5Small
-export JMiPOD
-export JMiPODSmall
+export Nsf5, Nsf5Small
+export JMiPOD, JMiPODSmall
+export MNIST, FashionMNIST
+export CIFAR10, CIFAR20, CIFAR100
+export SVHN2, SVHN2Extra
 
 export CrossEntropy
 export PatMat, PatMatNP
