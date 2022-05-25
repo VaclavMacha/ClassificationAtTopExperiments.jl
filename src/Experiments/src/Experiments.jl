@@ -2,11 +2,11 @@ module Experiments
 
 using BSON
 using Dates
-using DrWatson
 using Flux
 using HDF5
 using ImageCore
 using JpegTurbo
+using JSON3
 using Logging
 using LoggingExtras
 using MLDatasets
@@ -50,6 +50,10 @@ export load_checkpoint, save_checkpoint
 
 # basics
 const TO = TimerOutput()
+const PROJECT_DIR = get(ENV, "PROJECT_DIR", abspath(joinpath(@__DIR__, "../../../")))
+
+datadir(args...) = joinpath(PROJECT_DIR, "data", args...)
+
 const DATASETS_DIR = get(ENV, "DATASETS_DIR", datadir("datasets"))
 
 datasetsdir(args...) = joinpath(DATASETS_DIR, args...)
