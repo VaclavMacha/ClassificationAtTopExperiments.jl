@@ -5,12 +5,11 @@
 #=
 
 export JULIA_NUM_THREADS=32
+export DATADEPS_ALWAYS_ACCEPT= "true"
 
 srun --unbuffer julia --color=no --startup-file=no "${BASH_SOURCE[0]}" "$@"
 exit
 =#
-
-ENV["DATADEPS_ALWAYS_ACCEPT"] = "true"
 
 # parse args
 id = parse(Int, ENV["SLURM_ARRAY_TASK_ID"])
