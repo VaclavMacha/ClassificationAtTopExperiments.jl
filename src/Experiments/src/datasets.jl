@@ -56,7 +56,7 @@ obs_size(::AbstractNsf5) = (22510,)
 @kwdef struct Nsf5 <: AbstractNsf5
     payload::Float64 = 0.2
     ratio::Float64 = 1.0
-    at_train = 0.45
+    at_train::Float64 = 0.45
     at_valid::Float64 = 0.05
 end
 
@@ -65,7 +65,7 @@ parse_type(::Val{:Nsf5}) = Nsf5
 @kwdef struct Nsf5Small <: AbstractNsf5
     payload::Float64 = 0.2
     ratio::Float64 = 1.0
-    at_train = 0.45
+    at_train::Float64 = 0.45
     at_valid::Float64 = 0.05
 end
 
@@ -107,7 +107,7 @@ obs_size(::AbstractJMiPOD) = (256, 256, 3)
 @kwdef struct JMiPOD <: AbstractJMiPOD
     payload::Float64 = 0.4
     ratio::Float64 = 1.0
-    at_train = 0.45
+    at_train::Float64 = 0.45
     at_valid::Float64 = 0.05
 end
 
@@ -117,7 +117,7 @@ get_ids(::JMiPOD) = 1:47807
 @kwdef struct JMiPODSmall <: AbstractJMiPOD
     payload::Float64 = 0.4
     ratio::Float64 = 1.0
-    at_train = 0.45
+    at_train::Float64 = 0.45
     at_valid::Float64 = 0.05
 end
 
