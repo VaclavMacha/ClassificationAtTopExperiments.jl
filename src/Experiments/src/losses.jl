@@ -33,7 +33,7 @@ end
 # ------------------------------------------------------------------------------------------
 # PatMat and PatMatNP
 # ------------------------------------------------------------------------------------------
-abstract type AbstractPatMat <: LossType
+abstract type AbstractPatMat <: LossType end
 
 @kwdef struct PatMat <: AbstractPatMat
     τ::Float64 = 0.01
@@ -75,7 +75,7 @@ end
 # ------------------------------------------------------------------------------------------
 # TopPush, TopPushK, TopMeanτ, tauFPL
 # ------------------------------------------------------------------------------------------
-abstract type AbstractTopPush <: LossType
+abstract type AbstractTopPush <: LossType end
 
 @kwdef struct TopPush <: AbstractTopPush
     λ::Float64 = 0
@@ -127,7 +127,7 @@ end
 # ------------------------------------------------------------------------------------------
 # Grill and GrillNP
 # ------------------------------------------------------------------------------------------
-abstract type AbstractGrill <: LossType
+abstract type AbstractGrill <: LossType end
 
 @kwdef struct Grill <: AbstractGrill
     τ::Float64 = 0.1
