@@ -305,7 +305,7 @@ uuid = "251d5f9e-10c1-4699-ba24-e0ad168fa3e4"
 version = "0.2.1"
 
 [[deps.Experiments]]
-deps = ["AccuracyAtTop", "AccuracyAtTopPrimal", "BSON", "Dates", "DrWatson", "EfficientNet", "EvalMetrics", "Flux", "HDF5", "ImageCore", "JpegTurbo", "Logging", "LoggingExtras", "MLDatasets", "MLUtils", "ProgressMeter", "Random", "Statistics", "StatsBase", "TOML"]
+deps = ["AccuracyAtTop", "AccuracyAtTopPrimal", "BSON", "Dates", "DrWatson", "EfficientNet", "EvalMetrics", "Flux", "HDF5", "ImageCore", "JpegTurbo", "Logging", "LoggingExtras", "MLDatasets", "MLUtils", "ProgressMeter", "Random", "Statistics", "StatsBase", "TOML", "TimerOutputs"]
 path = "src/Experiments"
 uuid = "0ed54c3c-39b1-4574-89de-30629e1c012c"
 version = "0.1.0"

@@ -51,39 +51,53 @@ function load_or_run(
         """
 
         # Initialization
-        mkpath(joinpath(dir, "checkpoints"))
-        Random.seed!(seed)
-        train, valid, test = load(dataset)
-        model = materialize(dataset, model_type) |> device
-        pars = Flux.params(model)
-        loss = materialize(loss_type)
-        opt = materialize(opt_type)
+        @timeit TO "Initialization" begin
+            mkpath(joinpath(dir, "checkpoints"))
+            Random.seed!(seed)
+            train, valid, test = load(dataset)
+            model = materialize(dataset, model_type) |> device
+            pars = Flux.params(model)
+            loss = materialize(loss_type)
+            opt = materialize(opt_type)
+        end
 
         # Batch loader
         batch_size = batch_neg + batch_pos
-        loader = BatchLoader(
-            train;
-            buffer=isa(model_type, DeepTopPush) ? () -> Int[] : AccuracyAtTop.buffer_inds,
-            batch_neg,
-            batch_pos
-        )
-        iter_max = batch_size == 0 ? 1 : ceil(Int, length(train) / batch_size)
+        if batch_size == 0
+            batch = Batch(device)
+            loader = () -> train[1][:], train[2][:]
+            iter_max = 1
+        else
+            batch = Batch(device, obs_size(dataset)..., batch_size)
+            loader = BatchLoader(
+                train;
+                buffer=isa(model_type, DeepTopPush) ? () -> Int[] : AccuracyAtTop.buffer_inds,
+                batch_neg,
+                batch_pos
+            )
+            iter_max = ceil(Int, length(train) / batch_size)
+        end
 
         # Initial state
-        history = Dict{Symbol,Any}()
-        solution = checkpoint!(
-            history,
-            train,
-            valid,
-            test,
-            model,
-            pars,
-            loss,
-            batch_size,
-            device,
-            0,
-            joinpath(dir, "checkpoints", "checkpoint_epoch=0.bson"),
-        )
+        @timeit TO "Evaluation" begin
+            history = Dict{Symbol,Any}()
+            solution = checkpoint!(
+                history,
+                batch,
+                train,
+                valid,
+                test,
+                model,
+                pars,
+                loss,
+                0,
+                joinpath(dir, "checkpoints", "checkpoint_epoch=0.bson"),
+            )
+        end
+        @info """
+        TimerOutputs:
+        $(TO)
+        """
 
         # Progress logging
         @info "Start training..."
@@ -93,32 +107,41 @@ function load_or_run(
         for epoch in 1:epoch_max
             for iter in 1:iter_max
                 # loading batch
-                x, y = get_batch(loader(), device)
+                @timeit TO "Data metarialization" begin
+                    x, y = get_batch!(batch, loader())
+                end
 
                 # gradient step
-                grads = Flux.Zygote.gradient(pars) do
-                    loss(y, model(x), pars)
+                @timeit TO "Gradient step" begin
+                    grads = Flux.Zygote.gradient(pars) do
+                        loss(y, model(x), pars)
+                    end
+                    Flux.Optimise.update!(opt, pars, grads)
+                    progress!(p, iter, epoch)
                 end
-                Flux.Optimise.update!(opt, pars, grads)
-                progress!(p, iter, epoch)
             end
 
             # checkpoint
             if mod(epoch, checkpoint_every) == 0 || epoch == epoch_max
-                solution = checkpoint!(
-                    history,
-                    train,
-                    valid,
-                    test,
-                    model,
-                    pars,
-                    loss,
-                    batch_size,
-                    device,
-                    epoch,
-                    joinpath(dir, "checkpoints", "checkpoint_epoch=0.bson"),
-                )
+                @timeit TO "Evaluation" begin
+                    solution = checkpoint!(
+                        history,
+                        batch,
+                        train,
+                        valid,
+                        test,
+                        model,
+                        pars,
+                        loss,
+                        epoch,
+                        joinpath(dir, "checkpoints", "checkpoint_epoch=$(epoch).bson"),
+                    )
+                end
             end
+            @info """
+            TimerOutputs:
+            $(TO)
+            """
         end
         finish!(p)
         save_checkpoint(joinpath(dir, "solution.bson"), solution)
@@ -126,29 +149,14 @@ function load_or_run(
     return solution
 end
 
-function checkpoint!(
-    history,
-    train,
-    valid,
-    test,
-    model,
-    pars,
-    loss,
-    batch_size,
-    device,
-    epoch,
-    path,
-)
-    @info "Train data evaluation ..."
-    tm1 = @timed y_train, s_train = eval_model(train, model, batch_size, device)
+function checkpoint!(history, batch, train, valid, test, model, pars, loss, epoch, path)
+    tm1 = @timed y_train, s_train = eval_model!(batch, train, model)
     @info "Train data evaluation: $(durationstring(tm1.time))"
 
-    @info "Valid data evaluation ..."
-    tm2 = @timed y_valid, s_valid = eval_model(valid, model, batch_size, device)
+    tm2 = @timed y_valid, s_valid = eval_model!(batch, valid, model)
     @info "Valid data evaluation: $(durationstring(tm2.time))"
 
-    @info "Test data evaluation ..."
-    tm3 = @timed y_test, s_test = eval_model(test, model, batch_size, device)
+    tm3 = @timed y_test, s_test = eval_model!(batch, test, model)
     @info "Test data evaluation: $(durationstring(tm3.time))"
 
     loss_train = get!(history, :loss_train, Float32[])

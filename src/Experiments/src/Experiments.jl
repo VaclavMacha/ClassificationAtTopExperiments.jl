@@ -14,13 +14,13 @@ using MLUtils
 using Random
 using Statistics
 using StatsBase
+using TimerOutputs
 using TOML
 
 import AccuracyAtTopPrimal
 import AccuracyAtTop
 import EfficientNet
 
-using AccuracyAtTopPrimal: hinge, quadratic
 using Base: @kwdef
 using Flux.Losses: logitbinarycrossentropy
 using MLDatasets: SupervisedDataset, FileDataset
@@ -47,6 +47,8 @@ export TrainConfig
 export load_or_run
 export load_config, write_config
 export load_checkpoint, save_checkpoint
+
+const TO = TimerOutput()
 
 @kwdef struct TrainConfig
     seed::Int = 1234

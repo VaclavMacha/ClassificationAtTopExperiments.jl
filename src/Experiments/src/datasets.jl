@@ -1,3 +1,5 @@
+abstract type DatasetType end
+
 struct LabeledDataset{F,T} <: SupervisedDataset
     features::F
     targets::T
@@ -28,15 +30,17 @@ function split_data(data, at, ratio)
     ⋅ Valid: $(length(valid)) ($(stego_ratio(y[valid]))% stego)
     ⋅ Test:  $(length(test)) ($(stego_ratio(y[test]))% stego)
     """
-    return LabeledDataset(ObsView(x, train), y[train]),
-    LabeledDataset(ObsView(x, valid), y[valid]),
-    LabeledDataset(ObsView(x, test), y[test])
+    return LabeledDataset(obsview(x, train), y[train]),
+    LabeledDataset(obsview(x, valid), y[valid]),
+    LabeledDataset(obsview(x, test), y[test])
 end
 
+# ------------------------------------------------------------------------------------------
 # NSF5 datasets
-abstract type DatasetType end
-abstract type AbstractStegoData <: DatasetType end
-abstract type AbstractNsf5 <: AbstractStegoData end
+# ------------------------------------------------------------------------------------------
+abstract type AbstractNsf5 <: DatasetType end
+
+obs_size(::AbstractNsf5) = (22510,)
 
 @kwdef struct Nsf5 <: AbstractNsf5
     payload::Float64 = 0.2
@@ -82,8 +86,12 @@ function load(d::AbstractNsf5)
     return split_data((x, y), (d.at_train, d.at_valid), d.ratio)
 end
 
-# JMiPOD datasets
-abstract type AbstractJMiPOD <: AbstractStegoData end
+# ------------------------------------------------------------------------------------------
+# NSF5 datasets
+# ------------------------------------------------------------------------------------------
+abstract type AbstractJMiPOD <: DatasetType end
+
+obs_size(::AbstractJMiPOD) = (256, 256, 3)
 
 @kwdef struct JMiPOD <: AbstractJMiPOD
     payload::Float64 = 0.4
@@ -110,8 +118,8 @@ actordir(id::Int, args...) = jmipoddir("actor$(lpad(id, 5, "0"))", args...)
 list_jpgs(dir) = filter(file -> endswith(file, ".jpg"), readdir(dir; join=true))
 
 function load_image(path)
-    img = Float32.(channelview(jpeg_decode(path)))
-    return permutedims(img, (3, 2, 1))
+    img = jpeg_decode(path)
+    return PermutedDimsArray(channelview(img), (3, 2, 1))
 end
 
 function load(d::AbstractJMiPOD)
