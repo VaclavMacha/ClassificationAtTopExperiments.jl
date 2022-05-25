@@ -52,7 +52,7 @@ export load_checkpoint, save_checkpoint
 const TO = TimerOutput()
 const DATASETS_DIR = get(ENV, "DATASETS_DIR", datadir("datasets"))
 
-datasetdir(args...) = joinpath(DATASETS_DIR, args...)
+datasetsdir(args...) = joinpath(DATASETS_DIR, args...)
 
 @kwdef struct TrainConfig
     seed::Int = 1234
