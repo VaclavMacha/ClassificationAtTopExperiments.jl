@@ -89,6 +89,10 @@ function get_batch!(batch::Batch, data)
     end
 end
 
+function get_batch!(batch::Batch{Nothing}, data)
+    return  batch.device(data.features), data.targets
+end
+
 function eval_model!(
     batch::Batch,
     data::LabeledDataset,
@@ -114,7 +118,7 @@ function eval_model!(
     model,
 )
 
-    x = batch.device(data[1][:])
-    y = reshape(data[2][:], 1, :)
-    return cpu(model(x)), y
+    x = batch.device(data.features)
+    y = data.targets
+    return y, cpu(model(x))
 end

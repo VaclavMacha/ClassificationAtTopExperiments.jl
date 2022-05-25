@@ -65,7 +65,7 @@ function load_or_run(
         batch_size = batch_neg + batch_pos
         if batch_size == 0
             batch = Batch(device)
-            loader = () -> train[1][:], train[2][:]
+            loader = () -> train
             iter_max = 1
         else
             batch = Batch(device, obs_size(dataset)..., batch_size)

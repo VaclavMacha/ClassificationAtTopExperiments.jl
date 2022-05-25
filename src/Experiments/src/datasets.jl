@@ -30,9 +30,11 @@ function split_data(data, at, ratio)
     ⋅ Valid: $(length(valid)) ($(stego_ratio(y[valid]))% stego)
     ⋅ Test:  $(length(test)) ($(stego_ratio(y[test]))% stego)
     """
-    return LabeledDataset(obsview(x, train), y[train]),
-    LabeledDataset(obsview(x, valid), y[valid]),
-    LabeledDataset(obsview(x, test), y[test])
+    return (
+        LabeledDataset(obsview(x, train), reshape(y[train], 1, :)),
+        LabeledDataset(obsview(x, valid), reshape(y[valid], 1, :)),
+        LabeledDataset(obsview(x, test), reshape(y[test], 1, :)),
+    )
 end
 
 # ------------------------------------------------------------------------------------------
