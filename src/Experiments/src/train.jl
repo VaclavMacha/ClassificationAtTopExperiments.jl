@@ -29,6 +29,7 @@ function load_or_run(
         _string(model_type),
         _string(loss_type),
     )
+    solution = nothing
 
     if isfile(joinpath(dir, "solution.bson")) && !force
         return load_checkpoint(joinpath(dir, "solution.bson"))
@@ -54,7 +55,9 @@ function load_or_run(
         @timeit TO "Initialization" begin
             mkpath(joinpath(dir, "checkpoints"))
             Random.seed!(seed)
-            train, valid, test = load(dataset)
+            @timeit TO "Data Loading" begin
+                train, valid, test = load(dataset)
+            end
             model = materialize(dataset, model_type) |> device
             pars = Flux.params(model)
             loss = materialize(loss_type)
@@ -78,105 +81,92 @@ function load_or_run(
             iter_max = ceil(Int, length(train) / batch_size)
         end
 
+        # Progress logging
+        p = Progress(; epoch_max, iter_max)
+
         # Initial state
         @timeit TO "Evaluation" begin
             history = Dict{Symbol,Any}()
+            svdir = joinpath(dir, "checkpoints", "checkpoint_epoch=0.bson")
             solution = checkpoint!(
-                history,
-                batch,
-                train,
-                valid,
-                test,
-                model,
-                pars,
-                loss,
-                0,
-                joinpath(dir, "checkpoints", "checkpoint_epoch=0.bson"),
+                history, batch, train, valid, test, model, pars, loss, 0, svdir,
             )
         end
-        @info """
-        TimerOutputs:
-        $(TO)
-        """
 
-        # Progress logging
-        @info "Start training..."
-        p = Progress(; epoch_max, iter_max)
+        optionals = () -> (
+            "Loss train" => history[:loss_train][end],
+            "Loss valid" => history[:loss_valid][end],
+            "Loss test" => history[:loss_test][end],
+        )
 
         # Training
+        start!(p, optionals()...)
         for epoch in 1:epoch_max
-            for iter in 1:iter_max
-                # loading batch
-                @timeit TO "Data metarialization" begin
-                    x, y = get_batch!(batch, loader())
-                end
-
-                # gradient step
-                @timeit TO "Gradient step" begin
-                    grads = Flux.Zygote.gradient(pars) do
-                        loss(y, model(x), pars)
+            @timeit TO "Epoch" begin
+                for iter in 1:iter_max
+                    # loading batch
+                    @timeit TO "Loading batch" begin
+                        x, y = get_batch!(batch, loader())
                     end
-                    Flux.Optimise.update!(opt, pars, grads)
-                    progress!(p, iter, epoch)
+
+                    # gradient step
+                    @timeit TO "Gradient step" begin
+                        grads = Flux.Zygote.gradient(pars) do
+                            loss(y, model(x), pars)
+                        end
+                        Flux.Optimise.update!(opt, pars, grads)
+                        progress!(p, iter, epoch, optionals()...)
+                    end
                 end
             end
 
             # checkpoint
             if mod(epoch, checkpoint_every) == 0 || epoch == epoch_max
                 @timeit TO "Evaluation" begin
+                    svdir = joinpath(dir, "checkpoints", "checkpoint_epoch=$(epoch).bson")
                     solution = checkpoint!(
-                        history,
-                        batch,
-                        train,
-                        valid,
-                        test,
-                        model,
-                        pars,
-                        loss,
-                        epoch,
-                        joinpath(dir, "checkpoints", "checkpoint_epoch=$(epoch).bson"),
+                        history, batch, train, valid, test, model, pars, loss, epoch, svdir,
                     )
                 end
             end
-            @info """
-            TimerOutputs:
-            $(TO)
-            """
         end
-        finish!(p)
+        finish!(p, optionals()...)
         save_checkpoint(joinpath(dir, "solution.bson"), solution)
+    end
+    open(joinpath(dir, "timer.json"), "w") do path
+        JSON3.write(path, TimerOutputs.todict(TO))
+        println(path)
     end
     return solution
 end
 
 function checkpoint!(history, batch, train, valid, test, model, pars, loss, epoch, path)
-    tm1 = @timed y_train, s_train = eval_model!(batch, train, model)
-    @info "Train data evaluation: $(durationstring(tm1.time))"
-
-    tm2 = @timed y_valid, s_valid = eval_model!(batch, valid, model)
-    @info "Valid data evaluation: $(durationstring(tm2.time))"
-
-    tm3 = @timed y_test, s_test = eval_model!(batch, test, model)
-    @info "Test data evaluation: $(durationstring(tm3.time))"
+    @timeit TO "Train scores" y_train, s_train = eval_model!(batch, train, model)
+    @timeit TO "Valid scores" y_valid, s_valid = eval_model!(batch, valid, model)
+    @timeit TO "Test scores" y_test, s_test = eval_model!(batch, test, model)
 
     loss_train = get!(history, :loss_train, Float32[])
     loss_valid = get!(history, :loss_valid, Float32[])
     loss_test = get!(history, :loss_test, Float32[])
 
-    append!(loss_train, loss(y_train, s_train, pars))
-    append!(loss_valid, loss(y_train, s_train, pars))
-    append!(loss_test, loss(y_train, s_train, pars))
+    @timeit TO "Loss" begin
+        append!(loss_train, loss(y_train, s_train, pars))
+        append!(loss_valid, loss(y_valid, s_valid, pars))
+        append!(loss_test, loss(y_test, s_test, pars))
+    end
 
-    solution = Dict(
-        :model => deepcopy(cpu(model)),
-        :epoch => epoch,
-        :train => Dict(:y => cpu(y_train), :s => cpu(s_train)),
-        :valid => Dict(:y => cpu(y_valid), :s => cpu(s_valid)),
-        :test => Dict(:y => cpu(y_test), :s => cpu(s_test)),
-        :loss_train => loss_train,
-        :loss_valid => loss_valid,
-        :loss_test => loss_test,
-    )
-    save_checkpoint(path, solution)
+    @timeit TO "Saving" begin
+        solution = Dict(
+            :model => deepcopy(cpu(model)),
+            :epoch => epoch,
+            :train => Dict(:y => cpu(y_train), :s => cpu(s_train)),
+            :valid => Dict(:y => cpu(y_valid), :s => cpu(s_valid)),
+            :test => Dict(:y => cpu(y_test), :s => cpu(s_test)),
+            :loss_train => loss_train,
+            :loss_valid => loss_valid,
+            :loss_test => loss_test,
+        )
+        save_checkpoint(path, solution)
+    end
     return solution
 end
