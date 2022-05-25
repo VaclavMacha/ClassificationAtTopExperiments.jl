@@ -4,6 +4,8 @@
 #SBATCH --cpus-per-task=16
 #=
 
+module load --ignore-cache Julia/1.7.2-linux-x86_64
+
 export JULIA_NUM_THREADS=32
 export DATADEPS_ALWAYS_ACCEPT= "true"
 
