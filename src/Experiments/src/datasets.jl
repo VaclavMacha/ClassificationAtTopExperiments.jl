@@ -70,8 +70,8 @@ end
 nsf5dir(args...) = datadir("dataset", args...)
 cover_path(::Nsf5Small) = nsf5dir("partial", "cover_jrm.h5")
 cover_path(::Nsf5) = nsf5dir("full", "cover_jrm.h5")
-stego_path(::Nsf5Small) = nsf5dir("partial", "cover_jrm.h5")
-stego_path(::Nsf5) = nsf5dir("full", "cover_jrm.h5")
+stego_path(d::Nsf5Small) = nsf5dir("partial", "nsf5_$(d.payload)_jrm.h5")
+stego_path(d::Nsf5) = nsf5dir("full", "nsf5_$(d.payload)_jrm.h5")
 
 function load(d::AbstractNsf5)
     x_cover = load_hdf5(cover_path(d))
