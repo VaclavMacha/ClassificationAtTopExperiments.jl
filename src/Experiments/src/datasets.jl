@@ -71,7 +71,7 @@ function load_hdf5(path::AbstractString)
     end
 end
 
-nsf5dir(args...) = datadir("dataset", args...)
+nsf5dir(args...) = datasetsdir("Nsf5", args...)
 cover_path(::Nsf5Small) = nsf5dir("partial", "cover_jrm.h5")
 cover_path(::Nsf5) = nsf5dir("full", "cover_jrm.h5")
 stego_path(d::Nsf5Small) = nsf5dir("partial", "nsf5_$(d.payload)_jrm.h5")
@@ -113,7 +113,7 @@ end
 parse_type(::Val{:JMiPODSmall}) = JMiPODSmall
 get_ids(::JMiPODSmall) = setdiff(1:111, 6:10:116)
 
-jmipoddir(args...) = datadir("dataset", "jmipod", args...)
+jmipoddir(args...) = datasetsdir("JMiPOD", args...)
 actordir(id::Int, args...) = jmipoddir("actor$(lpad(id, 5, "0"))", args...)
 list_jpgs(dir) = filter(file -> endswith(file, ".jpg"), readdir(dir; join=true))
 
