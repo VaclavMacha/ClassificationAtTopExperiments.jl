@@ -33,7 +33,8 @@ export JMiPOD
 export JMiPODSmall
 
 export CrossEntropy
-export PatMatNP
+export PatMat, PatMatNP
+export TopPush, TopPushK, TopMeanTau, TauFPL
 export DeepTopPush
 
 export Linear

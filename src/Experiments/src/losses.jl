@@ -31,30 +31,95 @@ function materialize(o::CrossEntropy)
 end
 
 # ------------------------------------------------------------------------------------------
-# PatMatNP
+# PatMat and PatMatNP
 # ------------------------------------------------------------------------------------------
-@kwdef struct PatMatNP <: LossType
+abstract type AbstractPatMat <: LossType
+
+@kwdef struct PatMat <: AbstractPatMat
     τ::Float64 = 0.01
     λ::Float64 = 0
     surrogate::String = "Hinge"
     ϑ::Float64 = 1
 end
 
+@kwdef struct PatMatNP <: AbstractPatMat
+    τ::Float64 = 0.01
+    λ::Float64 = 0
+    surrogate::String = "Hinge"
+    ϑ::Float64 = 1
+end
+
+parse_type(::Val{:PatMat}) = PatMat
 parse_type(::Val{:PatMatNP}) = PatMatNP
 
-function materialize(o::PatMatNP)
+materialize_threshold(::PatMat, args...) = AccuracyAtTopPrimal.PatMat(args...)
+materialize_threshold(::PatMatNP, args...) = AccuracyAtTopPrimal.PatMatNP(args...)
+
+function materialize(o::AbstractPatMat)
     τ = Float32(o.τ)
     λ = Float32(o.λ)
     ϑ = Float32(o.ϑ)
     l1 = surrogate(o.surrogate, 1)
     l2 = surrogate(o.surrogate, ϑ)
-    aatp = AccuracyAtTopPrimal.PatMatNP(τ, l2)
+    aatp = materialize_threshold(o, τ, l2)
 
     loss(x, y, model, pars) = loss(y, model(x), pars)
 
     function loss(y, s::AbstractArray, pars)
         t = AccuracyAtTopPrimal.threshold(aatp, y, s)
         λ * sum(sqsum, pars) + AccuracyAtTopPrimal.fnr(y, s, t, l1)
+    end
+    return loss
+end
+
+# ------------------------------------------------------------------------------------------
+# TopPush, TopPushK, TopMeanτ, tauFPL
+# ------------------------------------------------------------------------------------------
+abstract type AbstractTopPush <: LossType
+
+@kwdef struct TopPush <: AbstractTopPush
+    λ::Float64 = 0
+    surrogate::String = "Hinge"
+end
+
+@kwdef struct TopPushK <: AbstractTopPush
+    K::Int = 5
+    λ::Float64 = 0
+    surrogate::String = "Hinge"
+end
+
+@kwdef struct TopMeanTau <: AbstractTopPush
+    τ::Float64 = 0.1
+    λ::Float64 = 0
+    surrogate::String = "Hinge"
+end
+
+@kwdef struct TauFPL <: AbstractTopPush
+    τ::Float64 = 0.1
+    λ::Float64 = 0
+    surrogate::String = "Hinge"
+end
+
+parse_type(::Val{:TopPush}) = TopPush
+parse_type(::Val{:TopPushK}) = TopPushK
+parse_type(::Val{:TopMeanTau}) = TopMeanTau
+parse_type(::Val{:TauFPL}) = TauFPL
+
+materialize_threshold(::TopPush) = AccuracyAtTopPrimal.TopPush()
+materialize_threshold(o::TopPushK) = AccuracyAtTopPrimal.TopPushK(o.K)
+materialize_threshold(o::TopMeanTau) = AccuracyAtTopPrimal.TopMean(Float32(o.τ))
+materialize_threshold(o::TauFPL) = AccuracyAtTopPrimal.τFPL(Float32(o.τ))
+
+function materialize(o::AbstractTopPush)
+    λ = Float32(o.λ)
+    l = surrogate(o.surrogate, 1)
+    aatp = materialize_threshold(o)
+
+    loss(x, y, model, pars) = loss(y, model(x), pars)
+
+    function loss(y, s::AbstractArray, pars)
+        t = AccuracyAtTopPrimal.threshold(aatp, y, s)
+        λ * sum(sqsum, pars) + AccuracyAtTopPrimal.fnr(y, s, t, l)
     end
     return loss
 end
