@@ -125,6 +125,44 @@ function materialize(o::AbstractTopPush)
 end
 
 # ------------------------------------------------------------------------------------------
+# Grill and GrillNP
+# ------------------------------------------------------------------------------------------
+abstract type AbstractGrill <: LossType
+
+@kwdef struct Grill <: AbstractGrill
+    τ::Float64 = 0.1
+    λ::Float64 = 0
+    surrogate::String = "Hinge"
+end
+
+@kwdef struct GrillNP <: AbstractGrill
+    τ::Float64 = 0.1
+    λ::Float64 = 0
+    surrogate::String = "Hinge"
+end
+
+parse_type(::Val{:Grill}) = Grill
+parse_type(::Val{:GrillNP}) = GrillNP
+
+materialize_threshold(o::Grill) = AccuracyAtTopPrimal.Grill(Float32(o.τ))
+materialize_threshold(o::GrillNP) = AccuracyAtTopPrimal.GrillNP(Float32(o.τ))
+
+function materialize(o::AbstractGrill)
+    λ = Float32(o.λ)
+    l = surrogate(o.surrogate, 1)
+    aatp = materialize_threshold(o)
+
+    loss(x, y, model, pars) = loss(y, model(x), pars)
+
+    function loss(y, s::AbstractArray, pars)
+        t = AccuracyAtTopPrimal.threshold(aatp, y, s)
+        λ * sum(sqsum, pars) + AccuracyAtTopPrimal.fnr(y, s, t, l) + AccuracyAtTopPrimal.fpr(y, s, t, l)
+    end
+    return loss
+end
+
+
+# ------------------------------------------------------------------------------------------
 # DeepTopPush
 # ------------------------------------------------------------------------------------------
 @kwdef struct DeepTopPush <: LossType
