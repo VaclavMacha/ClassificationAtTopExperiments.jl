@@ -33,7 +33,7 @@ sbatch_array(
     logdir=log_dir("JMiPODSmall"),
     partition="amdgpu",
     gres = "gpu:1",
-    mem="100G",
+    mem="200G",
 ) |> run
 
 sbatch_array(
@@ -42,5 +42,5 @@ sbatch_array(
     logdir=log_dir("JMiPOD"),
     partition="amdgpuextralong",
     gres = "gpu:1",
-    mem="100G",
+    mem="200G",
 ) |> run
