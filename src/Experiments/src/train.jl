@@ -69,57 +69,49 @@ function load_or_run(
         # Batch loader
         batch_size = batch_neg + batch_pos
         if batch_size == 0
-            batch = Batch(device)
-            loader = () -> train
-            iter_max = 1
+            loader = (getobs(train), )
         else
-            batch = Batch(
-                device,
-                obs_size(dataset)...,
-                batch_size;
-                use_threads = load_with_threads(dataset),
-            )
-            loader = BatchLoader(
-                train;
-                buffer=isa(model_type, DeepTopPush) ? () -> Int[] : AccuracyAtTop.buffer_inds,
-                batch_neg,
-                batch_pos
-            )
-            iter_max = ceil(Int, length(train) / batch_size)
+            buffer = isa(model_type, DeepTopPush) ? () -> Int[] : AccuracyAtTop.buffer_inds
+            loader = BatchLoader(train; buffer, batch_neg, batch_pos)
         end
+        iter_max = length(loader)
 
         # Progress logging
         p = Progress(; epoch_max, iter_max)
 
         # Initial state
-        @timeit TO "Evaluation" begin
-            history = Dict{Symbol,Any}()
-            svdir = joinpath(dir, "checkpoints", "checkpoint_epoch=0.bson")
-            solution = checkpoint!(
-                history, batch, train, valid, test, model, pars, loss, 0, svdir,
-            )
-        end
+        state = Dict{Symbol,Any}(
+            :device => device,
+            :epoch => 0,
+            :dir => dir,
+            :train_loader => EvalLoader(train, batch_size),
+            :valid_loader => EvalLoader(valid, batch_size),
+            :test_loader => EvalLoader(test, batch_size),
+        )
+        solution = checkpoint!(state, model, pars, loss)
 
         optionals = () -> (
-            "Loss train" => history[:loss_train][end],
-            "Loss valid" => history[:loss_valid][end],
-            "Loss test" => history[:loss_test][end],
+            "Loss train" => state[:loss_train][end],
+            "Loss valid" => state[:loss_valid][end],
+            "Loss test" => state[:loss_test][end],
         )
 
         # Training
         start!(p, optionals()...)
         for epoch in 1:epoch_max
+            state[:epoch] += 1
             @timeit TO "Epoch" begin
-                for iter in 1:iter_max
-                    # loading batch
+                for (iter, batch) in enumerate(loader)
                     @timeit TO "Loading batch" begin
-                        x, y = get_batch!(batch, loader())
+                        x, y = batch
+                        x = device(x)
                     end
 
                     # gradient step
                     @timeit TO "Gradient step" begin
                         grads = Flux.Zygote.gradient(pars) do
-                            loss(y, model(x), pars)
+                            s = cpu(model(x))
+                            loss(y, s, pars)
                         end
                         Flux.Optimise.update!(opt, pars, grads)
                         progress!(p, iter, epoch, optionals()...)
@@ -129,12 +121,7 @@ function load_or_run(
 
             # checkpoint
             if mod(epoch, checkpoint_every) == 0 || epoch == epoch_max
-                @timeit TO "Evaluation" begin
-                    svdir = joinpath(dir, "checkpoints", "checkpoint_epoch=$(epoch).bson")
-                    solution = checkpoint!(
-                        history, batch, train, valid, test, model, pars, loss, epoch, svdir,
-                    )
-                end
+                solution = checkpoint!(state, model, pars, loss)
             end
         end
         finish!(p, optionals()...)
@@ -147,33 +134,68 @@ function load_or_run(
     return solution
 end
 
-function checkpoint!(history, batch, train, valid, test, model, pars, loss, epoch, path)
-    @timeit TO "Train scores" y_train, s_train = eval_model!(batch, train, model)
-    @timeit TO "Valid scores" y_valid, s_valid = eval_model!(batch, valid, model)
-    @timeit TO "Test scores" y_test, s_test = eval_model!(batch, test, model)
+function checkpoint!(state, model, pars, loss)
+    @timeit TO "Evaluation" begin
+        device = state[:device]
+        train = state[:train_loader]
+        valid = state[:valid_loader]
+        test = state[:test_loader]
+        @timeit TO "Train scores" y_train, s_train = eval_model(train, model, device)
+        @timeit TO "Valid scores" y_valid, s_valid = eval_model(valid, model, device)
+        @timeit TO "Test scores" y_test, s_test = eval_model(test, model, device)
 
-    loss_train = get!(history, :loss_train, Float32[])
-    loss_valid = get!(history, :loss_valid, Float32[])
-    loss_test = get!(history, :loss_test, Float32[])
+        loss_train = get!(state, :loss_train, Float32[])
+        loss_valid = get!(state, :loss_valid, Float32[])
+        loss_test = get!(state, :loss_test, Float32[])
 
-    @timeit TO "Loss" begin
-        append!(loss_train, loss(y_train, s_train, pars))
-        append!(loss_valid, loss(y_valid, s_valid, pars))
-        append!(loss_test, loss(y_test, s_test, pars))
-    end
+        @timeit TO "Loss" begin
+            append!(loss_train, loss(y_train, s_train, pars))
+            append!(loss_valid, loss(y_valid, s_valid, pars))
+            append!(loss_test, loss(y_test, s_test, pars))
+        end
 
-    @timeit TO "Saving" begin
-        solution = Dict(
-            :model => deepcopy(cpu(model)),
-            :epoch => epoch,
-            :train => Dict(:y => cpu(y_train), :s => cpu(s_train)),
-            :valid => Dict(:y => cpu(y_valid), :s => cpu(s_valid)),
-            :test => Dict(:y => cpu(y_test), :s => cpu(s_test)),
-            :loss_train => loss_train,
-            :loss_valid => loss_valid,
-            :loss_test => loss_test,
-        )
-        save_checkpoint(path, solution)
+        epoch = state[:epoch]
+        dir = state[:dir]
+        path = joinpath(dir, "checkpoints", "checkpoint_epoch=$(epoch).bson")
+
+        @timeit TO "Saving" begin
+            solution = Dict(
+                :model => deepcopy(cpu(model)),
+                :epoch => epoch,
+                :train => Dict(:y => cpu(y_train), :s => cpu(s_train)),
+                :valid => Dict(:y => cpu(y_valid), :s => cpu(s_valid)),
+                :test => Dict(:y => cpu(y_test), :s => cpu(s_test)),
+                :loss_train => loss_train,
+                :loss_valid => loss_valid,
+                :loss_test => loss_test,
+            )
+            save_checkpoint(path, solution)
+        end
     end
     return solution
+end
+
+function eval_model(
+    loader::EvalLoader,
+    model,
+    device,
+)
+
+    batch_size = loader.batch_size
+    if length(loader) == 1
+        data, = iterate(loader)
+        inds, (x, y) = data
+        return cpu(y), cpu(model(device(x)))
+    else
+        n = numobs(loader)
+        s = zeros(Float32, 1, n)
+        y = similar(loader.data.targets, 1, n)
+
+        for data in loader
+            inds, (xi, yi) = data
+            y[inds] .= yi[:]
+            s[inds] .= cpu(model(device(xi)))[:]
+        end
+        return y, s
+    end
 end

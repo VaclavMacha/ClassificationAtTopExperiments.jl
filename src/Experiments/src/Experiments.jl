@@ -23,7 +23,6 @@ import MLDatasets
 
 using Base: @kwdef
 using Flux.Losses: logitbinarycrossentropy
-using MLDatasets: SupervisedDataset, FileDataset
 using ProgressMeter: durationstring, speedstring
 
 # exports
@@ -74,8 +73,8 @@ parse_type(::Val{:TrainConfig}) = TrainConfig
 _exclude(::Type{TrainConfig}) = (:checkpoint_every, :device, :force)
 
 # includes
+include("loaders.jl")
 include("datasets.jl")
-include("batchloader.jl")
 include("losses.jl")
 include("models.jl")
 include("optimisers.jl")

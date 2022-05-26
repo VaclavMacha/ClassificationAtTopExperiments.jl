@@ -1,8 +1,3 @@
-struct LabeledDataset{F,T} <: SupervisedDataset
-    features::F
-    targets::T
-end
-
 flux_shape(x) = x
 flux_shape(x::AbstractVector) = reshape(x, 1, :)
 function flux_shape(x::AbstractArray{T, 3}) where {T}
@@ -15,58 +10,6 @@ function _split_inds(inds, at::NTuple{2,AbstractFloat}, ratio::Real=1)
         train = train[1:round(Int64, ratio * length(train))]
     end
     return train, valid, test
-end
-
-stego_ratio(y) = round(100 * sum(y .== 1) / length(y); digits=2)
-
-function split_data(data, at, ratio)
-    x, y = data
-    cover = _split_inds(findall(vec(y) .== 0), at)
-    stego = _split_inds(findall(vec(y) .== 1), at, ratio)
-
-    train = vcat(cover[1], stego[1])
-    valid = vcat(cover[2], stego[2])
-    test = vcat(cover[3], stego[3])
-
-    @info """
-    Dataset:
-    ⋅ Train: $(length(train)) ($(stego_ratio(y[train]))% stego)
-    ⋅ Valid: $(length(valid)) ($(stego_ratio(y[valid]))% stego)
-    ⋅ Test:  $(length(test)) ($(stego_ratio(y[test]))% stego)
-    """
-    return (
-        LabeledDataset(flux_shape(obsview(x, train)), flux_shape(y[train])),
-        LabeledDataset(flux_shape(obsview(x, valid)), flux_shape(y[valid])),
-        LabeledDataset(flux_shape(obsview(x, test)), flux_shape(y[test])),
-    )
-end
-
-_binarize(y::Real, pos_labels) = y in pos_labels
-binarize(y, pos_labels) = _binarize.(y, Ref(pos_labels))
-
-function split_data(train, test, at, pos_labels)
-    inds_train, inds_valid = splitobs(1:numobs(train); at, shuffle=true)
-
-    x_train = obsview(train.features, inds_train)
-    y_train = binarize(train.targets[inds_train], pos_labels)
-
-    x_valid = obsview(train.features, inds_valid)
-    y_valid = binarize(train.targets[inds_valid], pos_labels)
-
-    x_test = test.features
-    y_test = binarize(test.targets, pos_labels)
-
-    @info """
-    Dataset:
-    ⋅ Train: $(numobs(y_train))
-    ⋅ Valid: $(numobs(y_valid))
-    ⋅ Test:  $(numobs(y_test))
-    """
-    return (
-        LabeledDataset(flux_shape(x_train), flux_shape(y_train)),
-        LabeledDataset(flux_shape(x_valid), flux_shape(y_valid)),
-        LabeledDataset(flux_shape(x_test), flux_shape(y_test)),
-    )
 end
 
 # ------------------------------------------------------------------------------------------
@@ -118,10 +61,25 @@ stego_path(d::Nsf5) = nsf5dir("full", "nsf5_$(d.payload)_jrm.h5")
 function load(d::AbstractNsf5)
     x_cover = load_hdf5(cover_path(d))
     x_stego = load_hdf5(stego_path(d))
-    x = hcat(x_cover, x_stego)
-    y = (1:size(x, 2)) .> size(x_cover, 2)
 
-    return split_data((x, y), (d.at_train, d.at_valid), d.ratio)
+    # split data
+    itr, ivl, its = _split_inds(1:numobs(x_cover), (d.at_train, d.at_valid))
+    jtr, jvl, jts = _split_inds(1:numobs(x_stego), (d.at_train, d.at_valid), d.ratio)
+
+    x_train = @views hcat(x_cover[:,itr], x_stego[:,jtr])
+    y_train = flux_shape((1:numobs(x_train)) .> length(itr))
+
+    x_valid = @views hcat(x_cover[:,ivl], x_stego[:,jvl])
+    y_valid = flux_shape((1:numobs(x_valid)) .> length(ivl))
+
+    x_test = @views hcat(x_cover[:,its], x_stego[:,jts])
+    y_test = flux_shape((1:numobs(x_test)) .> length(its))
+
+    return (
+        ArrayDataset(x_train, y_train),
+        ArrayDataset(x_valid, y_valid),
+        ArrayDataset(x_test, y_test),
+    )
 end
 
 # ------------------------------------------------------------------------------------------
@@ -176,10 +134,24 @@ function load(d::AbstractJMiPOD)
         append!(x_stego, stego)
     end
 
-    x = FileDataset(load_image, vcat(x_cover, x_stego))
-    y = (1:length(x)) .> length(x_cover)
+    x = vcat(x_cover, x_stego)
+    y = flux_shape((1:length(x)) .> length(x_cover))
 
-    return split_data((x, y), (d.at_train, d.at_valid), d.ratio)
+    # split data
+    cover = _split_inds(findall(vec(y) .== 0), (d.at_train, d.at_valid))
+    stego = _split_inds(findall(vec(y) .== 1), (d.at_train, d.at_valid), d.ratio)
+
+    train = vcat(cover[1], stego[1])
+    valid = vcat(cover[2], stego[2])
+    test = vcat(cover[3], stego[3])
+
+    shape = obs_size(d)
+
+    return (
+        FileDataset(load_image, shape, x[train], flux_shape(y[train]), true),
+        FileDataset(load_image, shape, x[valid], flux_shape(y[valid]), true),
+        FileDataset(load_image, shape, x[test], flux_shape(y[test]), true),
+    )
 end
 
 # ------------------------------------------------------------------------------------------
@@ -187,10 +159,24 @@ end
 # ------------------------------------------------------------------------------------------
 abstract type AbstractVision <: DatasetType end
 
+binarize(y, pos_labels) = in.(y, Ref(pos_labels))
+
 function load(d::AbstractVision)
     train = load_dataset(d, :train)
+    itrain, ivalid = splitobs(1:numobs(train); at=d.at_train, shuffle=true)
     test = load_dataset(d, :test)
-    return split_data(train, test, d.at_train, d.pos_labels)
+    pos = d.pos_labels
+
+    x_train = obsview(train.features, itrain)
+    y_train = obsview(train.targets, itrain)
+    x_valid = obsview(train.features, ivalid)
+    y_valid = obsview(train.targets, ivalid)
+
+    return (
+        ArrayDataset(flux_shape(x_train), flux_shape(binarize(y_train, pos))),
+        ArrayDataset(flux_shape(x_valid), flux_shape(binarize(y_valid, pos))),
+        ArrayDataset(flux_shape(test.features), flux_shape(binarize(test.targets, pos))),
+    )
 end
 
 @kwdef struct MNIST <: AbstractVision
