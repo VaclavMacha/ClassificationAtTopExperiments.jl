@@ -39,6 +39,8 @@ function load_or_run(
         dataset, model_type, loss_type, opt_type, train_config
     )
 
+    reset_timer!(TO)
+
     # Run
     logger = generate_logger(dir)
     with_logger(logger) do
