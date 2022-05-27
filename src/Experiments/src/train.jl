@@ -1,6 +1,3 @@
-load_checkpoint(path) = BSON.load(path, @__MODULE__)
-save_checkpoint(path, model) = BSON.bson(path, model)
-
 load_or_run(path) = load_or_run(load_config(path)...)
 
 function load_or_run(
@@ -31,14 +28,10 @@ function load_or_run(
     )
     solution = nothing
 
-    if isfile(joinpath(dir, "solution.bson")) && !force
-        return load_checkpoint(joinpath(dir, "solution.bson"))
+    if isfile(solution_path(dir)) && !force
+        return load_checkpoint(solution_path(dir))
     end
-    write_config(
-        joinpath(dir, "config.toml"),
-        dataset, model_type, loss_type, opt_type, train_config
-    )
-
+    write_config(config_path(dir), dataset, model_type, loss_type, opt_type, train_config)
     reset_timer!(TO)
 
     # Run
@@ -55,7 +48,6 @@ function load_or_run(
 
         # Initialization
         @timeit TO "Initialization" begin
-            mkpath(joinpath(dir, "checkpoints"))
             Random.seed!(seed)
             @timeit TO "Data Loading" begin
                 train, valid, test = load(dataset)
@@ -125,9 +117,9 @@ function load_or_run(
             end
         end
         finish!(p, optionals()...)
-        save_checkpoint(joinpath(dir, "solution.bson"), solution)
+        save_checkpoint(solution_path(dir), solution)
     end
-    open(joinpath(dir, "timer.json"), "w") do path
+    open(timer_path(dir), "w") do path
         JSON3.write(path, TimerOutputs.todict(TO))
         println(path)
     end
@@ -155,8 +147,8 @@ function checkpoint!(state, model, pars, loss)
         end
 
         epoch = state[:epoch]
-        dir = state[:dir]
-        path = joinpath(dir, "checkpoints", "checkpoint_epoch=$(epoch).bson")
+        path = solution_path(state[:dir], epoch)
+        mkpath(dirname(path))
 
         @timeit TO "Saving" begin
             solution = Dict(

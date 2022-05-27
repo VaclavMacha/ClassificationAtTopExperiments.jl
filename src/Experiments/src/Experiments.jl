@@ -49,16 +49,31 @@ export load_or_run
 export load_config, write_config
 export load_checkpoint, save_checkpoint
 
-# basics
+# Defaults paths
 const TO = TimerOutput()
 const PROJECT_DIR = get(ENV, "PROJECT_DIR", abspath(joinpath(@__DIR__, "../../../")))
 
 datadir(args...) = joinpath(PROJECT_DIR, "data", args...)
+datasetsdir(args...) = joinpath(PROJECT_DIR, "data", "datasets", args...)
 
-const DATASETS_DIR = get(ENV, "DATASETS_DIR", datadir("datasets"))
+function solution_path(dir::AbstractString, epoch::Int = -1)
+    if epoch < 0
+        joinpath(dir, "solution.bson")
+    else
+        joinpath(dir, "checkpoints", "checkpoint_epoch=$(epoch).bson")
+    end
+end
 
-datasetsdir(args...) = joinpath(DATASETS_DIR, args...)
+config_path(dir::AbstractString) = joinpath(dir, "config.toml")
+timer_path(dir::AbstractString) = joinpath(dir, "timer.json")
+explog_path(dir::AbstractString) = joinpath(dir, "experiment.log")
+errlog_path(dir::AbstractString) = joinpath(dir, "error.log")
 
+# Saving and loading of checkpoints
+load_checkpoint(path) = BSON.load(path, @__MODULE__)
+save_checkpoint(path, model) = BSON.bson(path, model)
+
+# TrainConfig
 @kwdef struct TrainConfig
     seed::Int = 1234
     epoch_max::Int = 1000

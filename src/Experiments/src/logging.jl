@@ -1,13 +1,14 @@
 function generate_logger(dir::AbstractString)
     fmt = "yyyy-mm-dd HH:MM:SS"
+    mkpath(dir)
     return TeeLogger(
         EarlyFilteredLogger(
             log -> log.level == Logging.Info,
-            TransformerLogger(FileLogger(joinpath(dir, "experiment.log"))) do log
+            TransformerLogger(FileLogger(explog_path(dir))) do log
                 merge(log, (; message="$(Dates.format(now(), fmt))\n $(log.message)"))
             end,
         ),
-        MinLevelLogger(FileLogger(joinpath(dir, "error.log")), Logging.Warn),
+        MinLevelLogger(FileLogger(errlog_path(dir)), Logging.Warn),
         global_logger()
     )
 end
