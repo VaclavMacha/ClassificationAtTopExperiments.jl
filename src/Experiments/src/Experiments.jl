@@ -18,6 +18,7 @@ using TOML
 
 import AccuracyAtTopPrimal
 import AccuracyAtTop
+import CUDA
 import EfficientNet
 import MLDatasets
 
@@ -86,6 +87,10 @@ end
 
 parse_type(::Val{:TrainConfig}) = TrainConfig
 _exclude(::Type{TrainConfig}) = (:checkpoint_every, :device, :force)
+
+# CUDA free memory
+free_memory!(x) = nothing
+free_memory!(x::CUDA.CuArray) = CUDA.unsafe_free!(x)
 
 # includes
 include("loaders.jl")

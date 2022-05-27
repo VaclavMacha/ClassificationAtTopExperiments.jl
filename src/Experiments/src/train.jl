@@ -108,6 +108,7 @@ function load_or_run(
                         Flux.Optimise.update!(opt, pars, grads)
                         progress!(p, iter, epoch, optionals()...)
                     end
+                    free_memory!(x)
                 end
             end
 
@@ -177,7 +178,11 @@ function eval_model(
     if length(loader) == 1
         data, = iterate(loader)
         inds, (x, y) = data
-        return cpu(y), cpu(model(device(x)))
+        x = device(x)
+        s = cpu(model(x))
+        y = cpu(y)
+        free_memory!(x)
+        return y, s
     else
         n = numobs(loader)
         s = zeros(Float32, 1, n)
@@ -185,8 +190,10 @@ function eval_model(
 
         for data in loader
             inds, (xi, yi) = data
+            xi = device(xi)
             y[inds] .= yi[:]
-            s[inds] .= cpu(model(device(xi)))[:]
+            s[inds] .= cpu(model(xi))[:]
+            free_memory!(xi)
         end
         return y, s
     end
