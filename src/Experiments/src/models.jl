@@ -29,7 +29,17 @@ efficientnet_type(::EfficientNetB0) = "efficientnet-b0"
 
 function materialize(::AbstractJMiPOD, m::AbstractEfficientNet)
     return if m.pretrained
-        error("pretrained model not available")
+        tmp = EfficientNet.from_pretrained(efficientnet_type(m))
+        inp = size(tmp.top.weight, 2)
+        EfficientNet.EffNet(
+            tmp.stem,
+            tmp.blocks,
+            tmp.head,
+            tmp.pooling,
+            Dense(inp => 1),
+            tmp.stages,
+            tmp.stages_channels,
+        )
     else
         EfficientNet.EffNet(efficientnet_type(m); n_classes=1, in_channels=3)
     end
