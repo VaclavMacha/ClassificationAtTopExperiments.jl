@@ -7,6 +7,9 @@ configsdir(args...) = projectdir("configs", args...)
 
 objectives = (
     DeepTopPush(surrogate="Hinge"),
+    DeepTopPushCross(α=0.1, surrogate="Hinge"),
+    DeepTopPushCross(α=0.5, surrogate="Hinge"),
+    DeepTopPushCross(α=0.9, surrogate="Hinge"),
     PatMatNP(τ=1e-3, surrogate="Hinge"),
     PatMatNP(τ=1e-4, surrogate="Hinge"),
     PatMatNP(τ=1e-5, surrogate="Hinge"),
@@ -21,7 +24,7 @@ optimiser = OptADAM(eta=1e-2)
 # Nsf5 datasets
 #-------------------------------------------------------------------------------------------
 model = Linear()
-train_config = TrainConfig(epoch_max=500, checkpoint_every=50)
+train_config = TrainConfig(epoch_max=1000, checkpoint_every=50)
 
 # Small data
 datasets = (
@@ -38,6 +41,9 @@ for dataset in datasets, loss_type in objectives
 end
 
 # Full data
+model = Linear()
+train_config = TrainConfig(epoch_max=50, checkpoint_every=50)
+
 datasets = (
     Nsf5(payload=0.2, ratio=1),
     Nsf5(payload=0.2, ratio=0.5),
@@ -54,7 +60,7 @@ end
 #-------------------------------------------------------------------------------------------
 # JMiPOD datasets
 #-------------------------------------------------------------------------------------------
-model = EfficientNetB0()
+model = EfficientNetB0(true)
 train_config = TrainConfig(
     epoch_max=100,
     checkpoint_every=10,
