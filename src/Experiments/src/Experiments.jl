@@ -36,7 +36,7 @@ export SVHN2, SVHN2Extra
 export CrossEntropy
 export PatMat, PatMatNP
 export TopPush, TopPushK, TopMeanTau, TauFPL
-export DeepTopPush
+export DeepTopPush, DeepTopPushCross
 
 export Linear
 export EfficientNetB0
@@ -57,7 +57,7 @@ const PROJECT_DIR = get(ENV, "PROJECT_DIR", abspath(joinpath(@__DIR__, "../../..
 datadir(args...) = joinpath(PROJECT_DIR, "data", args...)
 datasetsdir(args...) = joinpath(PROJECT_DIR, "data", "datasets", args...)
 
-function solution_path(dir::AbstractString, epoch::Int = -1)
+function solution_path(dir::AbstractString, epoch::Int=-1)
     if epoch < 0
         joinpath(dir, "solution.bson")
     else
