@@ -184,3 +184,25 @@ function materialize(o::DeepTopPush)
     end
     return loss
 end
+
+@kwdef struct DeepTopPushCross <: LossType
+    λ::Float64 = 0
+    α::Float64 = 0.5
+    surrogate::String = "Hinge"
+end
+
+parse_type(::Val{:DeepTopPushCross}) = DeepTopPushCross
+
+function materialize(o::DeepTopPushCross)
+    λ = Float32(o.λ)
+    α = Float32(o.α)
+    l = surrogate(o.surrogate, 1)
+    aatp = AccuracyAtTop.DeepTopPush()
+
+    loss(x, y, model, pars) = loss(y, model(x), pars)
+
+    function loss(y, s::AbstractArray, pars)
+        λ * sum(sqsum, pars) + α * logitbinarycrossentropy(s, y) + (1 - α) * AccuracyAtTop.objective(aatp, y, s; surrogate=l)
+    end
+    return loss
+end
