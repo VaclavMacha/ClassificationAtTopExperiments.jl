@@ -52,3 +52,11 @@ parse_type(::Val{:GoogLeNet}) = GoogLeNet
 function materialize(::AbstractJMiPOD, ::GoogLeNet)
     return Metalhead.GoogLeNet(; nclasses=1)
 end
+
+@kwdef struct MobileNetv3 <: AbstractEfficientNet end
+
+parse_type(::Val{:MobileNetv3}) = MobileNetv3
+
+function materialize(::AbstractJMiPOD, ::MobileNetv3)
+    return Metalhead.MobileNetv3(; nclasses=1)
+end

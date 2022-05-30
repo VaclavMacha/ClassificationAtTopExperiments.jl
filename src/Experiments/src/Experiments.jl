@@ -42,6 +42,7 @@ export DeepTopPush, DeepTopPushCross
 export Linear
 export EfficientNetB0
 export GoogLeNet
+export MobileNetv3
 
 export OptDescent
 export OptADAM
