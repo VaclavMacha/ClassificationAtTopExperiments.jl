@@ -44,3 +44,11 @@ function materialize(::AbstractJMiPOD, m::AbstractEfficientNet)
         EfficientNet.EffNet(efficientnet_type(m); n_classes=1, in_channels=3)
     end
 end
+
+@kwdef struct GoogLeNet <: AbstractEfficientNet end
+
+parse_type(::Val{:GoogLeNet}) = GoogLeNet
+
+function materialize(::AbstractJMiPOD, ::GoogLeNet)
+    return Metalhead.GoogLeNet(; nclasses=1)
+end

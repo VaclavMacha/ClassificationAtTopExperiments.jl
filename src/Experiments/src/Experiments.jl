@@ -21,6 +21,7 @@ import AccuracyAtTop
 import CUDA
 import EfficientNet
 import MLDatasets
+import Metalhead
 
 using Base: @kwdef
 using Flux.Losses: logitbinarycrossentropy
@@ -40,6 +41,7 @@ export DeepTopPush, DeepTopPushCross
 
 export Linear
 export EfficientNetB0
+export GoogLeNet
 
 export OptDescent
 export OptADAM
@@ -101,5 +103,6 @@ include("optimisers.jl")
 include("logging.jl")
 include("configs.jl")
 include("train.jl")
+include("evaluation.jl")
 
 end # module
