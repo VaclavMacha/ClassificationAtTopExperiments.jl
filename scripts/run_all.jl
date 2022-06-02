@@ -23,7 +23,7 @@ sbatch_array(
     scriptsdir("run_model.jl"),
     configs_dir("Nsf5");
     logdir=log_dir("Nsf5"),
-    partition="amdextralong",
+    partition="amd",
     mem="1000G"
 ) |> run
 
