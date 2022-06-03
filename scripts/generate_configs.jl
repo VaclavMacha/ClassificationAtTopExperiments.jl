@@ -42,7 +42,7 @@ end
 
 # Full data
 model = Linear()
-train_config = TrainConfig(epoch_max=50, checkpoint_every=50)
+train_config = TrainConfig(epoch_max=500, checkpoint_every=10)
 
 datasets = (
     Nsf5(payload=0.2, ratio=1),
