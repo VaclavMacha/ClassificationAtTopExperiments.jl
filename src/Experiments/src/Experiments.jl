@@ -29,7 +29,7 @@ using ProgressMeter: durationstring, speedstring
 
 # exports
 export Nsf5, Nsf5Small
-export JMiPOD, JMiPODSmall
+export JMiPOD, JMiPODSmall, JMiPODDebug
 export MNIST, FashionMNIST
 export CIFAR10, CIFAR20, CIFAR100
 export SVHN2, SVHN2Extra

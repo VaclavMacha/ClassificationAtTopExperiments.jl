@@ -111,6 +111,16 @@ end
 parse_type(::Val{:JMiPODSmall}) = JMiPODSmall
 get_ids(::JMiPODSmall) = setdiff(1:111, 6:10:116)
 
+@kwdef struct JMiPODDebug <: AbstractJMiPOD
+    payload::Float64 = 0.1
+    ratio::Float64 = 1.0
+    at_train::Float64 = 0.45
+    at_valid::Float64 = 0.05
+end
+
+parse_type(::Val{:JMiPODDebug}) = JMiPODDebug
+get_ids(::JMiPODDebug) = 1:5
+
 jmipoddir(args...) = datasetsdir("JMiPOD", args...)
 actordir(id::Int, args...) = jmipoddir("actor$(lpad(id, 5, "0"))", args...)
 list_jpgs(dir) = filter(file -> endswith(file, ".jpg"), readdir(dir; join=true))
@@ -151,6 +161,43 @@ function load(d::AbstractJMiPOD)
         FileDataset(load_image, shape, x[train], flux_shape(y[train]), true),
         FileDataset(load_image, shape, x[valid], flux_shape(y[valid]), true),
         FileDataset(load_image, shape, x[test], flux_shape(y[test]), true),
+    )
+end
+
+function load(d::JMiPODDebug)
+    ids = get_ids(d)
+
+    x_cover = String[]
+    x_stego = String[]
+    for id in ids
+        cover = list_jpgs(actordir(id))
+        append!(x_cover, cover)
+
+        type = lpad(round(Int, 100 * d.payload), 3, "0")
+        stego = list_jpgs(actordir(id, "stego-$(type)"))
+        append!(x_stego, stego)
+    end
+
+    x = vcat(x_cover, x_stego)
+    y = flux_shape((1:length(x)) .> length(x_cover))
+
+    # split data
+    cover = _split_inds(findall(vec(y) .== 0), (d.at_train, d.at_valid))
+    stego = _split_inds(findall(vec(y) .== 1), (d.at_train, d.at_valid), d.ratio)
+
+    train = vcat(cover[1], stego[1])
+    valid = vcat(cover[2], stego[2])
+    test = vcat(cover[3], stego[3])
+
+    shape = obs_size(d)
+    dtr = getobs(FileDataset(load_image, shape, x[train], flux_shape(y[train]), true))
+    dva = getobs(FileDataset(load_image, shape, x[valid], flux_shape(y[valid]), true))
+    dts = getobs(FileDataset(load_image, shape, x[test], flux_shape(y[test]), true))
+
+    return (
+        ArrayDataset(flux_shape(dtr.features), flux_shape(dtr.targets)),
+        ArrayDataset(flux_shape(dva.features), flux_shape(dva.targets)),
+        ArrayDataset(flux_shape(dts.features), flux_shape(dts.targets)),
     )
 end
 
