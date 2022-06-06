@@ -16,7 +16,7 @@ function materialize(::AbstractJMiPOD, m::Linear)
 end
 
 # ------------------------------------------------------------------------------------------
-# Efficient net
+# Efficient net, GoogLeNet, MobileNetv3
 # ------------------------------------------------------------------------------------------
 abstract type AbstractEfficientNet <: ModelType end
 
@@ -59,4 +59,35 @@ parse_type(::Val{:MobileNetv3}) = MobileNetv3
 
 function materialize(::AbstractJMiPOD, ::MobileNetv3)
     return Metalhead.MobileNetv3(; nclasses=1)
+end
+
+# ------------------------------------------------------------------------------------------
+# Custom conv
+# ------------------------------------------------------------------------------------------
+struct SimpleConv <: ModelType end
+
+parse_type(::Val{:SimpleConv}) = SimpleConv
+
+function materialize(::AbstractVisionGray, ::SimpleConv)
+    return Chain(
+        Conv((5, 5), 1 => 20, relu; stride=(1, 1)),
+        MaxPool((2, 2)),
+        Conv((5, 5), 20 => 50, relu; stride=(1, 1)),
+        MaxPool((2, 2)),
+        Flux.flatten,
+        Dense(800, 1)
+    )
+end
+
+function materialize(::AbstractVisionColor, ::SimpleConv)
+    return Chain(
+        Conv((3, 3), 3 => 64, relu; pad=SamePad()),
+        MaxPool((2, 2)),
+        Conv((3, 3), 64 => 128, relu; pad=SamePad()),
+        MaxPool((2, 2)),
+        Conv((3, 3), 128 => 128, relu; pad=SamePad()),
+        MaxPool((2, 2)),
+        Flux.flatten,
+        Dense(2048, 1)
+    )
 end

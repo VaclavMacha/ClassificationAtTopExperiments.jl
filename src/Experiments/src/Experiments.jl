@@ -37,12 +37,14 @@ export SVHN2, SVHN2Extra
 export CrossEntropy
 export PatMat, PatMatNP
 export TopPush, TopPushK, TopMeanTau, TauFPL
+export Grill, GrillNP
 export DeepTopPush, DeepTopPushCross
 
 export Linear
 export EfficientNetB0
 export GoogLeNet
 export MobileNetv3
+export SimpleConv
 
 export OptDescent
 export OptADAM
