@@ -1,6 +1,6 @@
 flux_shape(x) = x
 flux_shape(x::AbstractVector) = reshape(x, 1, :)
-function flux_shape(x::AbstractArray{T, 3}) where {T}
+function flux_shape(x::AbstractArray{T,3}) where {T}
     return reshape(x, size(x, 1), size(x, 2), 1, size(x, 3))
 end
 
@@ -66,13 +66,13 @@ function load(d::AbstractNsf5)
     itr, ivl, its = _split_inds(1:numobs(x_cover), (d.at_train, d.at_valid))
     jtr, jvl, jts = _split_inds(1:numobs(x_stego), (d.at_train, d.at_valid), d.ratio)
 
-    x_train = @views hcat(x_cover[:,itr], x_stego[:,jtr])
+    x_train = @views hcat(x_cover[:, itr], x_stego[:, jtr])
     y_train = flux_shape((1:numobs(x_train)) .> length(itr))
 
-    x_valid = @views hcat(x_cover[:,ivl], x_stego[:,jvl])
+    x_valid = @views hcat(x_cover[:, ivl], x_stego[:, jvl])
     y_valid = flux_shape((1:numobs(x_valid)) .> length(ivl))
 
-    x_test = @views hcat(x_cover[:,its], x_stego[:,jts])
+    x_test = @views hcat(x_cover[:, its], x_stego[:, jts])
     y_test = flux_shape((1:numobs(x_test)) .> length(its))
 
     return (
@@ -205,6 +205,8 @@ end
 # Vision datasets from MLDatasets
 # ------------------------------------------------------------------------------------------
 abstract type AbstractVision <: DatasetType end
+abstract type AbstractVisionGray <: AbstractVision end
+abstract type AbstractVisionColor <: AbstractVision end
 
 binarize(y, pos_labels) = in.(y, Ref(pos_labels))
 
@@ -226,8 +228,8 @@ function load(d::AbstractVision)
     )
 end
 
-@kwdef struct MNIST <: AbstractVision
-    pos_labels::Vector{Int} = [0]
+@kwdef struct MNIST <: AbstractVisionGray
+    pos_labels::Vector{Int} = [1]
     at_train::Float64 = 0.9
 end
 
@@ -235,8 +237,8 @@ obs_size(::MNIST) = (28, 28, 1)
 parse_type(::Val{:MNIST}) = MNIST
 load_dataset(::MNIST, key::Symbol) = MLDatasets.MNIST(Float32, key)
 
-@kwdef struct FashionMNIST <: AbstractVision
-    pos_labels::Vector{Int} = [0]
+@kwdef struct FashionMNIST <: AbstractVisionGray
+    pos_labels::Vector{Int} = [1]
     at_train::Float64 = 0.9
 end
 
@@ -244,8 +246,8 @@ obs_size(::FashionMNIST) = (28, 28, 1)
 parse_type(::Val{:FashionMNIST}) = FashionMNIST
 load_dataset(::FashionMNIST, key::Symbol) = MLDatasets.FashionMNIST(Float32, key)
 
-@kwdef struct CIFAR10 <: AbstractVision
-    pos_labels::Vector{Int} = [0]
+@kwdef struct CIFAR10 <: AbstractVisionColor
+    pos_labels::Vector{Int} = [1]
     at_train::Float64 = 0.9
 end
 
@@ -253,8 +255,8 @@ obs_size(::CIFAR10) = (32, 32, 3)
 parse_type(::Val{:CIFAR10}) = CIFAR10
 load_dataset(::CIFAR10, key::Symbol) = MLDatasets.CIFAR10(Float32, key)
 
-@kwdef struct CIFAR20 <: AbstractVision
-    pos_labels::Vector{Int} = [0]
+@kwdef struct CIFAR20 <: AbstractVisionColor
+    pos_labels::Vector{Int} = [1]
     at_train::Float64 = 0.9
 end
 
@@ -265,8 +267,8 @@ function load_dataset(::CIFAR20, key::Symbol)
     return LabeledDataset(data.features, data.targets.coarse)
 end
 
-@kwdef struct CIFAR100 <: AbstractVision
-    pos_labels::Vector{Int} = [0]
+@kwdef struct CIFAR100 <: AbstractVisionColor
+    pos_labels::Vector{Int} = [1]
     at_train::Float64 = 0.9
 end
 
@@ -277,8 +279,8 @@ function load_dataset(::CIFAR100, key::Symbol)
     return LabeledDataset(data.features, data.targets.fine)
 end
 
-@kwdef struct SVHN2 <: AbstractVision
-    pos_labels::Vector{Int} = [0]
+@kwdef struct SVHN2 <: AbstractVisionColor
+    pos_labels::Vector{Int} = [1]
     at_train::Float64 = 0.9
 end
 
@@ -286,19 +288,19 @@ obs_size(::SVHN2) = (32, 32, 3)
 parse_type(::Val{:SVHN2}) = SVHN2
 load_dataset(::SVHN2, key::Symbol) = MLDatasets.SVHN2(Float32, key)
 
-@kwdef struct SVHN2Extra <: AbstractVision
-    pos_labels::Vector{Int} = [0]
+@kwdef struct SVHN2Extra <: AbstractVisionColor
+    pos_labels::Vector{Int} = [1]
     at_train::Float64 = 0.9
 end
 
 obs_size(::SVHN2Extra) = (32, 32, 3)
 parse_type(::Val{:SVHN2Extra}) = SVHN2
-function  load_dataset(::SVHN2Extra, key::Symbol)
+function load_dataset(::SVHN2Extra, key::Symbol)
     return if key == :train
         d1 = MLDatasets.SVHN2(Float32, :train)
         d2 = MLDatasets.SVHN2(Float32, :extra)
 
-        x = cat(d1.features, d2.features; dims = 4)
+        x = cat(d1.features, d2.features; dims=4)
         y = vcat(d1.targets, d2.targets)
         return LabeledDataset(x, y)
     else
