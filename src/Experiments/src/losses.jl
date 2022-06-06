@@ -12,7 +12,7 @@ surrogate(::Val{:Quadratic}, ϑ=1) = x -> AccuracyAtTopPrimal.quadratic(x, ϑ)
 # CrossEntropy
 # ------------------------------------------------------------------------------------------
 @kwdef struct CrossEntropy <: LossType
-    λ::Float64 = 0
+    λ::Float64 = 1e-3
     ϵ::Float64 = 0.5
 end
 
@@ -37,14 +37,14 @@ abstract type AbstractPatMat <: LossType end
 
 @kwdef struct PatMat <: AbstractPatMat
     τ::Float64 = 0.01
-    λ::Float64 = 0
+    λ::Float64 = 1e-3
     surrogate::String = "Hinge"
     ϑ::Float64 = 1
 end
 
 @kwdef struct PatMatNP <: AbstractPatMat
     τ::Float64 = 0.01
-    λ::Float64 = 0
+    λ::Float64 = 1e-3
     surrogate::String = "Hinge"
     ϑ::Float64 = 1
 end
@@ -78,25 +78,25 @@ end
 abstract type AbstractTopPush <: LossType end
 
 @kwdef struct TopPush <: AbstractTopPush
-    λ::Float64 = 0
+    λ::Float64 = 1e-3
     surrogate::String = "Hinge"
 end
 
 @kwdef struct TopPushK <: AbstractTopPush
     K::Int = 5
-    λ::Float64 = 0
+    λ::Float64 = 1e-3
     surrogate::String = "Hinge"
 end
 
 @kwdef struct TopMeanTau <: AbstractTopPush
     τ::Float64 = 0.1
-    λ::Float64 = 0
+    λ::Float64 = 1e-3
     surrogate::String = "Hinge"
 end
 
 @kwdef struct TauFPL <: AbstractTopPush
     τ::Float64 = 0.1
-    λ::Float64 = 0
+    λ::Float64 = 1e-3
     surrogate::String = "Hinge"
 end
 
@@ -131,13 +131,13 @@ abstract type AbstractGrill <: LossType end
 
 @kwdef struct Grill <: AbstractGrill
     τ::Float64 = 0.1
-    λ::Float64 = 0
+    λ::Float64 = 1e-3
     surrogate::String = "Hinge"
 end
 
 @kwdef struct GrillNP <: AbstractGrill
     τ::Float64 = 0.1
-    λ::Float64 = 0
+    λ::Float64 = 1e-3
     surrogate::String = "Hinge"
 end
 
@@ -166,7 +166,7 @@ end
 # DeepTopPush
 # ------------------------------------------------------------------------------------------
 @kwdef struct DeepTopPush <: LossType
-    λ::Float64 = 0
+    λ::Float64 = 1e-3
     surrogate::String = "Hinge"
 end
 
@@ -186,7 +186,7 @@ function materialize(o::DeepTopPush)
 end
 
 @kwdef struct DeepTopPushCross <: LossType
-    λ::Float64 = 0
+    λ::Float64 = 1e-3
     α::Float64 = 0.5
     surrogate::String = "Hinge"
 end
