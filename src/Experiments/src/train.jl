@@ -116,6 +116,9 @@ function load_or_run(
             if mod(epoch, checkpoint_every) == 0 || epoch == epoch_max
                 solution = checkpoint!(state, model, pars, loss)
             end
+            @timeit TO "Garbage Collector" begin
+                GC.gc(true)
+            end
         end
         finish!(p, optionals()...)
         save_checkpoint(solution_path(dir), solution)
