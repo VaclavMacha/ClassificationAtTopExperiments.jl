@@ -19,7 +19,7 @@ function load_or_run(
 
     # Generate dir
     dir = datadir(
-        "results",
+        train_config.save_dir,
         _string(dataset),
         _string(train_config),
         _string(opt_type),
@@ -55,7 +55,6 @@ function load_or_run(
             model = materialize(dataset, model_type) |> device
             pars = Flux.params(model)
             loss = materialize(loss_type)
-            opt = materialize(opt_type)
         end
 
         # Batch loader
@@ -67,6 +66,9 @@ function load_or_run(
             loader = BatchLoader(train; buffer, batch_neg, batch_pos)
         end
         iter_max = length(loader)
+
+        # optimiser
+        opt = materialize(opt_type, iter_max)
 
         # Progress logging
         p = Progress(; epoch_max, iter_max)
