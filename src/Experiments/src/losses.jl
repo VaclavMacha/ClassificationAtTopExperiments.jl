@@ -25,7 +25,7 @@ function materialize(o::CrossEntropy)
     loss(x, y, model, pars) = loss(y, model(x), pars)
 
     function loss(y, s::AbstractArray, pars)
-        λ * sum(sqsum, pars) + logitbinarycrossentropy(s, y; agg=s -> aggregation(y, s, ϵ))
+        λ/2 * sum(sqsum, pars) + logitbinarycrossentropy(s, y; agg=s -> aggregation(y, s, ϵ))
     end
     return loss
 end
@@ -67,7 +67,7 @@ function materialize(o::AbstractPatMat)
 
     function loss(y, s::AbstractArray, pars)
         t = AccuracyAtTopPrimal.threshold(aatp, y, s)
-        λ * sum(sqsum, pars) + AccuracyAtTopPrimal.fnr(y, s, t, l1)
+        λ/2 * sum(sqsum, pars) + AccuracyAtTopPrimal.fnr(y, s, t, l1)
     end
     return loss
 end
@@ -119,7 +119,7 @@ function materialize(o::AbstractTopPush)
 
     function loss(y, s::AbstractArray, pars)
         t = AccuracyAtTopPrimal.threshold(aatp, y, s)
-        λ * sum(sqsum, pars) + AccuracyAtTopPrimal.fnr(y, s, t, l)
+        λ/2 * sum(sqsum, pars) + AccuracyAtTopPrimal.fnr(y, s, t, l)
     end
     return loss
 end
@@ -156,7 +156,7 @@ function materialize(o::AbstractGrill)
 
     function loss(y, s::AbstractArray, pars)
         t = AccuracyAtTopPrimal.threshold(aatp, y, s)
-        λ * sum(sqsum, pars) + AccuracyAtTopPrimal.fnr(y, s, t, l) + AccuracyAtTopPrimal.fpr(y, s, t, l)
+        λ/2 * sum(sqsum, pars) + AccuracyAtTopPrimal.fnr(y, s, t, l) + AccuracyAtTopPrimal.fpr(y, s, t, l)
     end
     return loss
 end
@@ -180,7 +180,7 @@ function materialize(o::DeepTopPush)
     loss(x, y, model, pars) = loss(y, model(x), pars)
 
     function loss(y, s::AbstractArray, pars)
-        λ * sum(sqsum, pars) + AccuracyAtTop.objective(aatp, y, s; surrogate=l)
+        λ/2 * sum(sqsum, pars) + AccuracyAtTop.objective(aatp, y, s; surrogate=l)
     end
     return loss
 end
@@ -202,7 +202,7 @@ function materialize(o::DeepTopPushCross)
     loss(x, y, model, pars) = loss(y, model(x), pars)
 
     function loss(y, s::AbstractArray, pars)
-        λ * sum(sqsum, pars) + α * logitbinarycrossentropy(s, y) + (1 - α) * AccuracyAtTop.objective(aatp, y, s; surrogate=l)
+        λ/2 * sum(sqsum, pars) + α * logitbinarycrossentropy(s, y) + (1 - α) * AccuracyAtTop.objective(aatp, y, s; surrogate=l)
     end
     return loss
 end
