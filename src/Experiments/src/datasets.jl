@@ -26,8 +26,8 @@ obs_size(::AbstractNsf5) = (22510,)
 @kwdef struct Nsf5 <: AbstractNsf5
     payload::Float64 = 0.2
     ratio::Float64 = 1.0
-    at_train::Float64 = 0.45
-    at_valid::Float64 = 0.05
+    at_train::Float64 = 0.375
+    at_valid::Float64 = 0.125
 end
 
 parse_type(::Val{:Nsf5}) = Nsf5
@@ -35,8 +35,8 @@ parse_type(::Val{:Nsf5}) = Nsf5
 @kwdef struct Nsf5Small <: AbstractNsf5
     payload::Float64 = 0.2
     ratio::Float64 = 1.0
-    at_train::Float64 = 0.45
-    at_valid::Float64 = 0.05
+    at_train::Float64 = 0.375
+    at_valid::Float64 = 0.125
 end
 
 parse_type(::Val{:Nsf5Small}) = Nsf5Small
@@ -94,8 +94,8 @@ obs_size(::AbstractJMiPOD) = (256, 256, 3)
 @kwdef struct JMiPOD <: AbstractJMiPOD
     payload::Float64 = 0.4
     ratio::Float64 = 1.0
-    at_train::Float64 = 0.45
-    at_valid::Float64 = 0.05
+    at_train::Float64 = 0.375
+    at_valid::Float64 = 0.125
 end
 
 parse_type(::Val{:JMiPOD}) = JMiPOD
@@ -104,8 +104,8 @@ get_ids(::JMiPOD) = 1:47807
 @kwdef struct JMiPODSmall <: AbstractJMiPOD
     payload::Float64 = 0.4
     ratio::Float64 = 1.0
-    at_train::Float64 = 0.45
-    at_valid::Float64 = 0.05
+    at_train::Float64 = 0.375
+    at_valid::Float64 = 0.125
 end
 
 parse_type(::Val{:JMiPODSmall}) = JMiPODSmall
@@ -114,8 +114,8 @@ get_ids(::JMiPODSmall) = setdiff(1:111, 6:10:116)
 @kwdef struct JMiPODDebug <: AbstractJMiPOD
     payload::Float64 = 0.1
     ratio::Float64 = 1.0
-    at_train::Float64 = 0.45
-    at_valid::Float64 = 0.05
+    at_train::Float64 = 0.375
+    at_valid::Float64 = 0.125
 end
 
 parse_type(::Val{:JMiPODDebug}) = JMiPODDebug
@@ -230,7 +230,7 @@ end
 
 @kwdef struct MNIST <: AbstractVisionGray
     pos_labels::Vector{Int} = [1]
-    at_train::Float64 = 0.9
+    at_train::Float64 = 0.75
 end
 
 obs_size(::MNIST) = (28, 28, 1)
@@ -239,7 +239,7 @@ load_dataset(::MNIST, key::Symbol) = MLDatasets.MNIST(Float32, key)
 
 @kwdef struct FashionMNIST <: AbstractVisionGray
     pos_labels::Vector{Int} = [1]
-    at_train::Float64 = 0.9
+    at_train::Float64 = 0.75
 end
 
 obs_size(::FashionMNIST) = (28, 28, 1)
@@ -248,7 +248,7 @@ load_dataset(::FashionMNIST, key::Symbol) = MLDatasets.FashionMNIST(Float32, key
 
 @kwdef struct CIFAR10 <: AbstractVisionColor
     pos_labels::Vector{Int} = [1]
-    at_train::Float64 = 0.9
+    at_train::Float64 = 0.75
 end
 
 obs_size(::CIFAR10) = (32, 32, 3)
@@ -257,7 +257,7 @@ load_dataset(::CIFAR10, key::Symbol) = MLDatasets.CIFAR10(Float32, key)
 
 @kwdef struct CIFAR20 <: AbstractVisionColor
     pos_labels::Vector{Int} = [1]
-    at_train::Float64 = 0.9
+    at_train::Float64 = 0.75
 end
 
 obs_size(::CIFAR20) = (32, 32, 3)
@@ -269,7 +269,7 @@ end
 
 @kwdef struct CIFAR100 <: AbstractVisionColor
     pos_labels::Vector{Int} = [1]
-    at_train::Float64 = 0.9
+    at_train::Float64 = 0.75
 end
 
 obs_size(::CIFAR100) = (32, 32, 3)
@@ -281,7 +281,7 @@ end
 
 @kwdef struct SVHN2 <: AbstractVisionColor
     pos_labels::Vector{Int} = [1]
-    at_train::Float64 = 0.9
+    at_train::Float64 = 0.75
 end
 
 obs_size(::SVHN2) = (32, 32, 3)
@@ -290,7 +290,7 @@ load_dataset(::SVHN2, key::Symbol) = MLDatasets.SVHN2(Float32, key)
 
 @kwdef struct SVHN2Extra <: AbstractVisionColor
     pos_labels::Vector{Int} = [1]
-    at_train::Float64 = 0.9
+    at_train::Float64 = 0.75
 end
 
 obs_size(::SVHN2Extra) = (32, 32, 3)
