@@ -7,12 +7,16 @@ struct Linear <: ModelType end
 
 parse_type(::Val{:Linear}) = Linear
 
-function materialize(::AbstractNsf5, m::Linear)
+function materialize(::AbstractNsf5, ::Linear)
     return Dense(22510 => 1; bias=false)
 end
 
-function materialize(::AbstractJMiPOD, m::Linear)
+function materialize(::AbstractJMiPOD, ::Linear)
     return Chain(Flux.flatten, Dense(196608 => 1; bias=false))
+end
+
+function materialize(D::AbstractVision, ::Linear)
+    return Chain(Flux.flatten, Dense(prod(obs_size(D)) => 1; bias=false))
 end
 
 # ------------------------------------------------------------------------------------------
