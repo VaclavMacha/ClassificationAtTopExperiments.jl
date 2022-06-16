@@ -89,10 +89,11 @@ save_checkpoint(path, model) = BSON.bson(path, model)
     batch_neg::Int = 0
     force::Bool = false
     device::String = "CPU"
+    save_dir::String = "results"
 end
 
 parse_type(::Val{:TrainConfig}) = TrainConfig
-_exclude(::Type{TrainConfig}) = (:checkpoint_every, :device, :force)
+_exclude(::Type{TrainConfig}) = (:checkpoint_every, :device, :force, :save_dir)
 
 # CUDA free memory
 free_memory!(x) = nothing
