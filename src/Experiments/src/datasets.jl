@@ -119,7 +119,7 @@ get_ids(::JMiPODSmall) = setdiff(1:111, 6:10:116)
 end
 
 parse_type(::Val{:JMiPODDebug}) = JMiPODDebug
-get_ids(::JMiPODDebug) = 1:5
+get_ids(::JMiPODDebug) = 1:1
 
 jmipoddir(args...) = datasetsdir("JMiPOD", args...)
 actordir(id::Int, args...) = jmipoddir("actor$(lpad(id, 5, "0"))", args...)
@@ -261,10 +261,10 @@ load_dataset(::CIFAR10, key::Symbol) = MLDatasets.CIFAR10(Float32, key)
 end
 
 obs_size(::CIFAR20) = (32, 32, 3)
-parse_type(::Val{:CIFAR20}) = CIFAR100
+parse_type(::Val{:CIFAR20}) = CIFAR20
 function load_dataset(::CIFAR20, key::Symbol)
     data = MLDatasets.CIFAR100(Float32, key)
-    return LabeledDataset(data.features, data.targets.coarse)
+    return ArrayDataset(data.features, flux_shape(data.targets.coarse))
 end
 
 @kwdef struct CIFAR100 <: AbstractVisionColor
@@ -276,7 +276,7 @@ obs_size(::CIFAR100) = (32, 32, 3)
 parse_type(::Val{:CIFAR100}) = CIFAR100
 function load_dataset(::CIFAR100, key::Symbol)
     data = MLDatasets.CIFAR100(Float32, key)
-    return LabeledDataset(data.features, data.targets.fine)
+    return ArrayDataset(data.features, flux_shape(data.targets.fine))
 end
 
 @kwdef struct SVHN2 <: AbstractVisionColor
@@ -294,7 +294,7 @@ load_dataset(::SVHN2, key::Symbol) = MLDatasets.SVHN2(Float32, key)
 end
 
 obs_size(::SVHN2Extra) = (32, 32, 3)
-parse_type(::Val{:SVHN2Extra}) = SVHN2
+parse_type(::Val{:SVHN2Extra}) = SVHN2Extra
 function load_dataset(::SVHN2Extra, key::Symbol)
     return if key == :train
         d1 = MLDatasets.SVHN2(Float32, :train)
@@ -302,7 +302,7 @@ function load_dataset(::SVHN2Extra, key::Symbol)
 
         x = cat(d1.features, d2.features; dims=4)
         y = vcat(d1.targets, d2.targets)
-        return LabeledDataset(x, y)
+        return ArrayDataset(x, flux_shape(y))
     else
         MLDatasets.SVHN2(Float32, :test)
     end
