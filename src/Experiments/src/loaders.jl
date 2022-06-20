@@ -250,8 +250,8 @@ function Base.iterate(d::EvalLoader, iter = 1)
 
     getobs!(d.batch_buffer, d.data, inds)
     if length(inds) == d.batch_size
-        return (inds, d.batch_buffer), iter + 2
+        return (inds, d.batch_buffer), iter + 1
     else
-        return (inds, getobs(d.batch_buffer, 1:length(inds))), iter + 2
+        return (inds, getobs(d.batch_buffer, 1:length(inds))), iter + 1
     end
 end
