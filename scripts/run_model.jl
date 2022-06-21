@@ -18,7 +18,7 @@ id = parse(Int, ENV["SLURM_ARRAY_TASK_ID"])
 path = readdir(ARGS[1]; join=true, sort=true)[id]
 
 # precompilation
-s = rand(1:120)
+s = rand(1:60)
 @info """
 Configuration:
 ⋅ File: $(basename(path))
