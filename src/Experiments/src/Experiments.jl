@@ -1,7 +1,10 @@
 module Experiments
 
 using BSON
+using CSV
+using DataFrames
 using Dates
+using EvalMetrics
 using Flux
 using HDF5
 using ImageCore
@@ -10,6 +13,7 @@ using JSON3
 using Logging
 using LoggingExtras
 using MLUtils
+using Plots
 using Random
 using Statistics
 using StatsBase
@@ -54,6 +58,7 @@ export TrainConfig
 export load_or_run
 export load_config, write_config
 export load_checkpoint, save_checkpoint
+export evaluation, join_cols!, tpr_at_fpr, tpr_at_k, pos_at_top_k, round_perc
 
 # Defaults paths
 const TO = TimerOutput()
