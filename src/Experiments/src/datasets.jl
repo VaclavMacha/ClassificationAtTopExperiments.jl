@@ -13,12 +13,37 @@ function _split_inds(inds, at::NTuple{2,AbstractFloat}, ratio::Real=1)
 end
 
 # ------------------------------------------------------------------------------------------
-# NSF5 datasets
+# DatasetType
 # ------------------------------------------------------------------------------------------
 abstract type DatasetType end
 
 load_with_threads(::DatasetType) = false
 
+function summary_dataset(d::DatasetType)
+    train, valid, test = load(d)
+    return summary_dataset(d, train.targets, valid.targets, test.targets)
+end
+
+function summary_dataset(d::DatasetType, y_train, y_valid, y_test)
+    return DataFrame(
+        dataset=_string(d),
+        size=join(obs_size(d), "x"),
+        train=length(y_train),
+        train_ratio=round_perc(sum(y_train .== 1) / length(y_train)),
+        valid=length(y_valid),
+        valid_ratio=round_perc(sum(y_valid .== 1) / length(y_valid)),
+        test=length(y_test),
+        test_ratio=round_perc(sum(y_test .== 1) / length(y_test)),
+    )
+end
+
+function summary_dataset(ds::DatasetType...)
+    return vcat([summary_dataset(d) for d in ds]...; cols=:union)
+end
+
+# ------------------------------------------------------------------------------------------
+# NSF5 datasets
+# ------------------------------------------------------------------------------------------
 abstract type AbstractNsf5 <: DatasetType end
 
 obs_size(::AbstractNsf5) = (22510,)
@@ -52,6 +77,12 @@ function load_hdf5(path::AbstractString)
     end
 end
 
+function hdf5_data_size(path)
+    return h5open(path, "r") do fid
+        size(fid["data"])
+    end
+end
+
 nsf5dir(args...) = datasetsdir("Nsf5", args...)
 cover_path(::Nsf5Small) = nsf5dir("partial", "cover_jrm.h5")
 cover_path(::Nsf5) = nsf5dir("full", "cover_jrm.h5")
@@ -80,6 +111,21 @@ function load(d::AbstractNsf5)
         ArrayDataset(x_valid, y_valid),
         ArrayDataset(x_test, y_test),
     )
+end
+
+function summary_dataset(d::AbstractNsf5)
+    ~, n_cover = hdf5_data_size(cover_path(d))
+    ~, n_stego = hdf5_data_size(stego_path(d))
+
+    # split data
+    itr, ivl, its = _split_inds(1:n_cover, (d.at_train, d.at_valid))
+    jtr, jvl, jts = _split_inds(1:n_stego, (d.at_train, d.at_valid), d.ratio)
+
+    y_train = flux_shape((1:(length(itr)+length(jtr))) .> length(itr))
+    y_valid = flux_shape((1:(length(ivl)+length(jvl))) .> length(ivl))
+    y_test = flux_shape((1:(length(its)+length(jts))) .> length(its))
+
+    return summary_dataset(d, y_train, y_valid, y_test)
 end
 
 # ------------------------------------------------------------------------------------------
