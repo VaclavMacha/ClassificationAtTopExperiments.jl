@@ -104,6 +104,7 @@ function evaluation(
                 evaluation(dir, id_start + id, metrics...; split=:test, kwargs...),
             )
         end
+        filter!(df -> isa(df, AbstractDataFrame), dfs)
         df = vcat(dfs...; cols=:union)
     else
         df = CSV.read(path, DataFrame)
@@ -168,6 +169,26 @@ end
 # ------------------------------------------------------------------------------------------
 # Plots
 # ------------------------------------------------------------------------------------------
+function _load_solution(
+    dir::AbstractString;
+    epoch::Int=-1
+)
+
+    file_solution = solution_path(dir, epoch)
+    file_config = config_path(dir)
+
+    if !isfile(file_solution)
+        @warn "Missing solution file: $(file_solution)"
+        return nothing
+    end
+    if !isfile(file_config)
+        @warn "Missing configuration file: $(file_config)"
+        return nothing
+    end
+    _, _, loss, _, _ = load_config(file_config)
+    return load_checkpoint(file_solution), loss
+end
+
 plot_roc(d::Dict, key; kwargs...) = plot_roc!(plot(), d, key; kwargs...)
 plot_roc!(d::Dict, key; kwargs...) = plot_roc!(current(), d, key; kwargs...)
 
@@ -188,7 +209,7 @@ function plot_roc(
     plt = plot()
     for dir in readdir(maindir; join=true)
         isdir(dir) || continue
-        out = evaluation(dir; key, epoch)
+        out = _load_solution(dir; epoch)
         if !isnothing(out)
             sol, loss = out
             in(loss, exclude) && continue
