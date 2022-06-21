@@ -159,12 +159,53 @@ function list_subdirs(dirs, level::Int=4)
     end
 end
 
-function select_best(df, col::Symbol; by=argmax)
+function _select_best(df, col::Symbol; by=argmax)
     inds = findall(df.split .== :valid)
     ind = by(df[inds, col])
     id = df.id[inds[ind]]
     return df[df.id.==id, :]
 end
+
+function select_best(
+    df_in::DataFrame,
+    metric::Symbol;
+    split::Symbol=:test,
+    wide::Bool=true,
+    rank::Bool=false,
+    rank_func::Function=x -> competerank(x; rev=true)
+)
+
+    df = select(df_in, [:id, :seed, :dataset, :loss, :split, metric])
+
+    # select best parameters for loss
+    df_best = combine(
+        groupby(df, [:dataset, :loss, :seed]),
+        sdf -> _select_best(sdf, metric)
+    )
+    df_best = df_best[df_best.split.==split, :]
+    select!(df_best, Not([:seed, :split, :id]))
+
+    # average over seeds
+    df_avg = combine(
+        groupby(df, [:dataset, :loss]),
+        metric => mean => metric,
+    )
+
+    # convert to ranks
+    if rank
+        df_avg = transform(
+            groupby(df_avg, :dataset),
+            :loss,
+            metric => rank_func => metric,
+        )
+    end
+    return wide ? DataFrames.unstack(df_avg, :dataset, :loss, metric) : df_avg
+end
+
+# ------------------------------------------------------------------------------------------
+# Critical diagrams
+# ------------------------------------------------------------------------------------------
+
 
 # ------------------------------------------------------------------------------------------
 # Plots
