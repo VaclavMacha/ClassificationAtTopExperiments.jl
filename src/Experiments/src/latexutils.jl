@@ -1,22 +1,21 @@
 # ------------------------------------------------------------------------------------------
 # critical diagrams
 # ------------------------------------------------------------------------------------------
-leftpad(s, n) = string(repeat(" ", n), s)
+# left_pad(n) = string(repeat(" ", n))
 
-function critical_diagram(
+function Experiments.critical_diagram(
     models,
     ranks,
     cv::Real;
-    pad::Int=2,
-    vpad::Real=0.4,
-    v_offset::Real=0,
-    cv_vpad::Real=0.2,
-    cv_offset::Real=0.03,
     title::AbstractString="",
-    full_range::Bool=true
+    l_pad::Int=2,
+    v_pad::Real=0.4,
+    v_pad_cv::Real=0.2,
+    ymin::Real=0,
+    full_range::Bool=true,
+    digits::Int=2
 )
 
-    # header
     io = IOBuffer()
     write(
         io,
@@ -34,75 +33,73 @@ function critical_diagram(
     # axis
     xmin = full_range ? 1 : floor(Int, minimum(ranks))
     xmax = full_range ? length(models) : ceil(Int, maximum(ranks))
-    tmin = floor(v_offset - 0.1; digits=2)
-    tmax = ceil(v_offset + 0.1; digits=2)
-    write(io, leftpad("\\draw ($(xmin),$(v_offset)) -- ($(xmax),$(v_offset)); \n", pad)) # x axis
-    write(io, leftpad("\\foreach \\x in {$xmin,...,$xmax} \\draw (\\x,$(tmax)) -- (\\x,$(tmin)) node[anchor=north]{\$\\x\$}; \n", pad)) # x ticks
-
-    # nodes
-    prm = sortperm(ranks)
-    n = length(ranks)
-    n_left = ceil(Int, n / 2)
-    level = round(v_offset + cv_vpad; digits=2)
-    last_cv = -1
-    levels = []
-
-    for (i, i_perm) in enumerate(prm)
-        r = round(ranks[i_perm]; digits=2)
-        m = models[i_perm]
-        if i <= n_left
-            h = round(v_offset + i * vpad; digits=2)
-            write(io, leftpad("\\draw[line_node] ($(r),$(v_offset)) -- ($r,$h) -- ($(xmin-0.1), $h) node[anchor=east] {$(m)}; \n", pad))
-        else
-            h = round(v_offset + (n - i + 1) * vpad; digits=2)
-            write(io, leftpad("\\draw[line_node] ($(r),$(v_offset)) -- ($r,$h) -- ($(xmax+0.1), $h) node[anchor=west] {$(m)}; \n", pad))
-        end
-
-        # levels
-        lmin = round(r - cv_offset; digits=2)
-        lmax = NaN
-        for j_perm in prm[i+1:end]
-            ranks[j_perm] - ranks[i_perm] <= cv || break
-            lmax = round(ranks[j_perm] + cv_offset; digits=2)
-        end
-        if !isnan(lmax) && last_cv != lmax
-            if last_cv < lmax
-                last_cv = lmax
-            end
-            push!(levels, (lmin, lmax))
-        end
-    end
-
-    # print levels
-    hs = Dict{Int, Any}()
-    for (lmin, lmax) in levels
-        lvls = sort(collect(keys(hs)))
-        if !isempty(hs)
-            ind = maximum(lvls) + 1
-            for j in lvls
-                (kmin, kmax) = hs[j]
-                if !any(kmin .<= (lmin, lmax) .<= kmax)
-                    hs[j] = (lmin, lmax)
-                    ind = j
-                    break
-                end
-            end
-        else
-            ind = 1
-            hs[1] = (lmin, lmax)
-        end
-        h = round(v_offset + ind * cv_vpad; digits=2)
-        write(io, leftpad("\\draw[line_cv] ($lmin,$h) -- ($lmax, $h); \n", pad))
-    end
+    tmin = floor(ymin - 0.1; digits)
+    tmax = ceil(ymin + 0.1; digits)
+    n_models = length(ranks)
+    n_left = ceil(Int, n_models / 2)
 
     # title
     if !isempty(title)
-        h = round(v_offset + (n_left + 1) * vpad; digits=2)
-        c = round((xmin + xmax) / 2; digits=2)
-        write(io, leftpad("\\node at ($(c),$(h)) {$title}; \n", pad))
+        x = round((xmin + xmax) / 2; digits=2)
+        y = round(ymin + (n_left + 1) * v_pad; digits)
+        write(io, left_pad(l_pad))
+        write(io, "\\node at ($x,$y) {$title}; \n")
     end
 
-    # end of the document
+    # x-axis
+    write(io, left_pad(l_pad))
+    write(io, "\\draw ($(xmin),$(ymin)) -- ($(xmax),$(ymin)); \n")
+
+    # x ticks
+    write(io, left_pad(l_pad))
+    write(io, "\\foreach \\x in {$xmin,...,$xmax} \\draw (\\x,$(tmax)) -- (\\x,$(tmin)) node[anchor=north]{\$\\x\$}; \n")
+
+    # nodes
+    prm = sortperm(ranks)
+    for (i, ind) in enumerate(prm)
+        x_min = round(ranks[ind]; digits)
+        y_min = ymin
+        model = models[ind]
+        if i <= n_left
+            x_max = round(xmin - 0.1; digits)
+            y_max = round(ymin + i * v_pad; digits)
+            anchor = "east"
+        else
+            x_max = round(xmax + 0.1; digits)
+            y_max = round(ymin + (n_models - i + 1) * v_pad; digits)
+            anchor = "west"
+        end
+        write(io, left_pad(l_pad))
+        write(io, "\\draw[line_node] ($x_min,$y_min) -- ($x_min,$y_max) -- ($x_max, $y_max) node[anchor=$anchor] {$(model)}; \n")
+    end
+
+    # levels
+    coordinates = []
+    for i in eachindex(prm)
+        j = findlast(abs.(ranks[prm[(i+1):end]] .- ranks[prm[i]]) .<= cv)
+        isnothing(j) && continue
+
+        x_min = round(ranks[prm[i]]; digits)
+        x_max = round(ranks[prm[j+i]]; digits)
+        if isempty(coordinates) || coordinates[end][2] != x_max
+            if isempty(coordinates)
+                k = 1
+            else
+                kind = findfirst(getindex.(coordinates, 2) .< x_min)
+                if isnothing(kind)
+                    k = maximum(getindex.(coordinates, 3)) + 1
+                else
+                    k = coordinates[kind][3]
+                end
+            end
+            y = round(ymin + k * v_pad_cv; digits)
+            push!(coordinates, (x_min, x_max, k, y))
+            write(io, left_pad(l_pad))
+            write(io, "\\draw[line_cv] ($x_min,$y) -- ($x_max, $y); \n")
+        end
+    end
+
+    # added end of document
     write(
         io,
         """
