@@ -125,10 +125,6 @@ function load_or_run(
         finish!(p, optionals()...)
         save_checkpoint(solution_path(dir), solution)
     end
-    open(timer_path(dir), "w") do path
-        JSON3.write(path, TimerOutputs.todict(TO))
-        println(path)
-    end
     return solution
 end
 
