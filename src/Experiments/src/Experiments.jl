@@ -4,6 +4,7 @@ using BSON
 using CSV
 using DataFrames
 using Dates
+using Distributions
 using EvalMetrics
 using Flux
 using HDF5
@@ -50,16 +51,17 @@ export GoogLeNet
 export MobileNetv3
 export SimpleConv
 
-export OptDescent
-export OptADAM
+export OptDescent, OptADAM, OptRMSProp
 
 export TrainConfig
 
 export load_or_run
 export load_config, write_config
 export load_checkpoint, save_checkpoint
-export evaluation, join_cols!, tpr_at_fpr, tpr_at_k, pos_at_top_k, round_perc
+export evaluation, join_cols, tpr_at_fpr, tpr_at_k, pos_at_top_k, round_perc, rank_table
 export summary_dataset
+export critical_diagram
+export nemenyi_cd, friedman_test_statistic, friedman_critval
 
 # Defaults paths
 const TO = TimerOutput()
@@ -115,5 +117,6 @@ include("logging.jl")
 include("configs.jl")
 include("train.jl")
 include("evaluation.jl")
+include("latexutils.jl")
 
 end # module

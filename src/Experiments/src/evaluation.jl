@@ -86,11 +86,9 @@ end
 
 function evaluation(
     path::AbstractString;
-    metrics::Vector{<:Pair} = Pair[],
-    to_join::Vector{<:Pair} = Pair[],
+    metrics::Vector{<:Pair}=Pair[],
     level::Int=4,
     id_start::Int=0,
-    include_cols=Symbol[],
     kwargs...
 )
 
@@ -109,9 +107,20 @@ function evaluation(
     else
         df = CSV.read(path, DataFrame)
     end
+    return df
+end
+
+function join_cols(
+    df_in::AbstractDataFrame;
+    metrics::Vector{<:Pair}=Pair[],
+    to_join::Vector{<:Pair}=Pair[],
+    include_cols::Vector{Symbol}=Symbol[],
+    kwargs...
+)
 
     # merge data frames
-    join_cols!(df, to_join...)
+    df = copy(df_in)
+    _join_cols!(df, to_join...)
     if isempty(include_cols)
         return df
     else
@@ -120,13 +129,13 @@ function evaluation(
     end
 end
 
-function join_cols(cols...)
+function _join_cols(cols...)
     return map(zip(cols...)) do vals
         join(string.(skipmissing(vals)), "-")
     end
 end
 
-function join_cols!(df, tojoin::Pair...)
+function _join_cols!(df, tojoin::Pair...)
     for (col_new, cols) in tojoin
         cols = intersect(cols, propertynames(df))
         isempty(cols) && continue
@@ -137,7 +146,7 @@ function join_cols!(df, tojoin::Pair...)
         end
 
         ind = findfirst(in(cols), propertynames(df))
-        new_column = select(df, cols => join_cols)[:, 1]
+        new_column = select(df, cols => _join_cols)[:, 1]
         select!(df, Not(cols))
         insertcols!(df, ind, col_new => new_column)
     end
@@ -175,37 +184,104 @@ function select_best(
     rank_func::Function=x -> competerank(x; rev=true)
 )
 
-    df = select(df_in, [:id, :seed, :dataset, :loss, :split, metric])
+    df = select(df_in, [:id, :dataset, :loss, :split, metric])
 
     # select best parameters for loss
     df_best = combine(
-        groupby(df, [:dataset, :loss, :seed]),
+        groupby(df, [:dataset, :loss]),
         sdf -> _select_best(sdf, metric)
     )
     df_best = df_best[df_best.split.==split, :]
-    select!(df_best, Not([:seed, :split, :id]))
-
-    # average over seeds
-    df_avg = combine(
-        groupby(df, [:dataset, :loss]),
-        metric => mean => metric,
-    )
+    select!(df_best, Not([:split, :id]))
 
     # convert to ranks
     if rank
-        df_avg = transform(
-            groupby(df_avg, :dataset),
+        df_best = transform(
+            groupby(df_best, :dataset),
             :loss,
             metric => rank_func => metric,
         )
     end
-    return wide ? DataFrames.unstack(df_avg, :dataset, :loss, metric) : df_avg
+    return wide ? DataFrames.unstack(df_best, :dataset, :loss, metric) : df_best
+end
+
+function rank_table(
+    df::DataFrame,
+    metrics::Vector{Symbol}=Symbol[];
+    split::Symbol=:test,
+    kwargs...
+)
+    dfs = []
+    for (i, metric) in enumerate(metrics)
+        df_best = select_best(df, metric; split, wide=true, rank=true, kwargs...)
+        dropmissing!(df_best)
+
+        tmp = DataFrame(Dict(
+            :loss => names(df_best)[2:end],
+            metric => vec(mean(Array(df_best[:, 2:end]); dims=1)),
+        ))
+        if i == 1
+            insertcols!(
+                tmp,
+                2,
+                :n_datasets => size(df_best, 1),
+                :n_loss => size(df_best, 2) - 1,
+            )
+        end
+        push!(dfs, tmp)
+    end
+    return innerjoin(dfs..., on=:loss)
 end
 
 # ------------------------------------------------------------------------------------------
 # Critical diagrams
 # ------------------------------------------------------------------------------------------
+"""
+    friedman_test_statistic(R::Vector, n::Int, k::Int)
 
+Value of the Friedman test statistic.
+
+# Arguments
+- `R::Vector{<:Real}` vector of mean ranks
+- `k::Int` number of models
+- `n::Int` number of datasets
+"""
+function friedman_test_statistic(R::Vector, n::Int, k::Int)
+    return 12 * n / (k * (k + 1)) * (sum(R .^ 2) - k * (k + 1)^2 / 4)
+end
+
+crit_chisq(α::Real, df::Int) = quantile(Chisq(df), 1 - α)
+
+"""
+    friedman_critval(k::Int; α::Real = 0.05)
+
+Critical value of the Friedman test at level α.
+
+# Arguments
+- `k::Int` number of models
+"""
+friedman_critval(k::Int; α::Real=0.05) = crit_chisq(α / 2, k - 1)
+
+function crit_srd(α::Real, k::Real, df::Real)
+    if isnan(k) || isnan(df)
+        NaN
+    else
+        quantile(StudentizedRange(df, k), 1 - α)
+    end
+end
+
+"""
+    nemenyi_cd(k::Int, n::Int; α::Real = 0.05)
+
+Critical difference value for the Nemenyi paired test. If the difference between the average rank of two models is larger than this, their performance is different with a given statistical significance α.
+
+# Arguments
+- `k::Int` number of models
+- `n::Int` number of datasets
+"""
+function nemenyi_cd(k::Int, n::Int; α::Real=0.05)
+    return sqrt(k * (k + 1) / (6 * n)) * crit_srd(α, k, Inf) / sqrt(2)
+end
 
 # ------------------------------------------------------------------------------------------
 # Plots
