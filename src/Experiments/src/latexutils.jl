@@ -1,9 +1,9 @@
 # ------------------------------------------------------------------------------------------
 # critical diagrams
 # ------------------------------------------------------------------------------------------
-# left_pad(n) = string(repeat(" ", n))
+left_pad(n) = string(repeat(" ", n))
 
-function Experiments.critical_diagram(
+function critical_diagram(
     models,
     ranks,
     cv::Real;
