@@ -40,10 +40,10 @@ function load_or_run(
         @info """
         Initialization:
         ⋅ Dir: $(dir)
-        ⋅ Dataset config: $(_string(dataset))
-        ⋅ Model config: $(_string(model_type))
-        ⋅ Loss config: $(_string(loss_type))
-        ⋅ Optimiser config: $(_string(opt_type))
+        ⋅ Dataset: $(_string(dataset))
+        ⋅ Model: $(_string(model_type))
+        ⋅ Loss: $(_string(loss_type))
+        ⋅ Optimiser: $(_string(opt_type))
         """
 
         # Initialization
