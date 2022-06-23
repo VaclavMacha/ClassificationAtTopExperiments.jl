@@ -31,9 +31,9 @@ sbatch_array(
     scriptsdir("run_model.jl"),
     configs_dir("JMiPODSmall");
     logdir=log_dir("JMiPODSmall"),
-    partition="amdgpulong",
+    partition="amdgpu",
     gres="gpu:1",
-    mem="300G"
+    mem="100G"
 ) |> run
 
 sbatch_array(

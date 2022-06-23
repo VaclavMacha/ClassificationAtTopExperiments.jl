@@ -18,7 +18,7 @@ objectives = (
     CrossEntropy(ϵ=0.99),
     CrossEntropy(ϵ=0.999),
 )
-optimiser = OptADAM(eta=1e-2)
+optimiser = OptDescent(eta=1e-3)
 
 #-------------------------------------------------------------------------------------------
 # Nsf5 datasets
@@ -62,7 +62,7 @@ end
 #-------------------------------------------------------------------------------------------
 model = EfficientNetB0(true)
 train_config = TrainConfig(
-    epoch_max=100,
+    epoch_max=30,
     checkpoint_every=10,
     batch_neg=32,
     batch_pos=32,
@@ -71,9 +71,9 @@ train_config = TrainConfig(
 
 # Small data
 datasets = (
-    JMiPODSmall(payload=0.4, ratio=1),
-    JMiPODSmall(payload=0.4, ratio=0.5),
-    JMiPODSmall(payload=0.4, ratio=0.1),
+    JMiPODSmall(payload=0.1, ratio=1),
+    JMiPODSmall(payload=0.1, ratio=0.5),
+    JMiPODSmall(payload=0.1, ratio=0.1),
 )
 
 i = 0
