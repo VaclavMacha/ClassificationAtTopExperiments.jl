@@ -109,6 +109,7 @@ _exclude(::Type{TrainConfig}) = (:checkpoint_every, :device, :force, :save_dir)
     seed::Int = 1234
     epoch_max::Int = 100
     checkpoint_every::Int = 10
+    loss_every::Int = 100
     p_update::Real = 0.9
     ε::Real = 1e-6
     force::Bool = false
@@ -116,7 +117,7 @@ _exclude(::Type{TrainConfig}) = (:checkpoint_every, :device, :force, :save_dir)
 end
 
 parse_type(::Val{:TrainConfigDual}) = TrainConfigDual
-_exclude(::Type{TrainConfigDual}) = (:checkpoint_every, :force, :save_dir)
+_exclude(::Type{TrainConfigDual}) = (:checkpoint_every, :force, :save_dir, :loss_every)
 
 # CUDA free memory
 free_memory!(x) = nothing

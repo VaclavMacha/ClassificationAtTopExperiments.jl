@@ -258,7 +258,8 @@ function load_or_run(
             getobs(test);
             epoch_max=train_config.epoch_max,
             checkpoint_every=train_config.checkpoint_every,
-            p_update=train_config.p_update,
+            loss_every=train_config.loss_every,
+            p_update = train_config.p_update,
             dir=dir,
             ε=train_config.ε
         )
