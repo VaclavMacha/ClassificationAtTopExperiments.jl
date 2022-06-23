@@ -181,7 +181,7 @@ function select_best(
     split::Symbol=:test,
     wide::Bool=true,
     rank::Bool=false,
-    rank_func::Function=x -> competerank(x; rev=true)
+    rank_func::Function = x -> tiedrank(x; rev=true)
 )
 
     df = select(df_in, [:id, :dataset, :loss, :split, metric])
