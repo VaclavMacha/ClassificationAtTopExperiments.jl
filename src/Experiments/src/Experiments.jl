@@ -30,7 +30,7 @@ import Metalhead
 
 using Base: @kwdef
 using Flux.Losses: logitbinarycrossentropy
-using ProgressMeter: durationstring, speedstring
+using ProgressMeter: durationstring, speedstring, @showprogress
 
 # exports
 export Nsf5, Nsf5Small

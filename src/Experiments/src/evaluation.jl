@@ -95,7 +95,7 @@ function evaluation(
     if isdir(path)
         dirs = list_subdirs(path, level)
         isempty(dirs) && return nothing
-        dfs = map(enumerate(dirs)) do (id, dir)
+        dfs = @showprogress map(enumerate(dirs)) do (id, dir)
             return vcat(
                 evaluation(dir, id_start + id, metrics...; split=:train, kwargs...),
                 evaluation(dir, id_start + id, metrics...; split=:valid, kwargs...),
