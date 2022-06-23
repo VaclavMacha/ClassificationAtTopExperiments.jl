@@ -4,6 +4,10 @@ function flux_shape(x::AbstractArray{T,3}) where {T}
     return reshape(x, size(x, 1), size(x, 2), 1, size(x, 3))
 end
 
+dual_shape(x::AbstractVector) = reshape(x, 1, :)
+dual_shape(x::AbstractMatrix) = x
+dual_shape(x::AbstractArray) = Matrix(Flux.flatten(x))
+
 function _split_inds(inds, at::NTuple{2,AbstractFloat}, ratio::Real=1)
     train, valid, test = splitobs(inds; at, shuffle=true)
     if 0 < ratio < 1
@@ -89,7 +93,7 @@ cover_path(::Nsf5) = nsf5dir("full", "cover_jrm.h5")
 stego_path(d::Nsf5Small) = nsf5dir("partial", "nsf5_$(d.payload)_jrm.h5")
 stego_path(d::Nsf5) = nsf5dir("full", "nsf5_$(d.payload)_jrm.h5")
 
-function load(d::AbstractNsf5)
+function load(d::AbstractNsf5, reshape_func=flux_shape)
     x_cover = load_hdf5(cover_path(d))
     x_stego = load_hdf5(stego_path(d))
 
@@ -98,18 +102,18 @@ function load(d::AbstractNsf5)
     jtr, jvl, jts = _split_inds(1:numobs(x_stego), (d.at_train, d.at_valid), d.ratio)
 
     x_train = @views hcat(x_cover[:, itr], x_stego[:, jtr])
-    y_train = flux_shape((1:numobs(x_train)) .> length(itr))
+    y_train = (1:numobs(x_train)) .> length(itr)
 
     x_valid = @views hcat(x_cover[:, ivl], x_stego[:, jvl])
-    y_valid = flux_shape((1:numobs(x_valid)) .> length(ivl))
+    y_valid = (1:numobs(x_valid)) .> length(ivl)
 
     x_test = @views hcat(x_cover[:, its], x_stego[:, jts])
-    y_test = flux_shape((1:numobs(x_test)) .> length(its))
+    y_test = (1:numobs(x_test)) .> length(its)
 
     return (
-        ArrayDataset(x_train, y_train),
-        ArrayDataset(x_valid, y_valid),
-        ArrayDataset(x_test, y_test),
+        ArrayDataset(reshape_func(x_train), reshape_func(y_train)),
+        ArrayDataset(reshape_func(x_valid), reshape_func(y_valid)),
+        ArrayDataset(reshape_func(x_test), reshape_func(y_test)),
     )
 end
 
@@ -256,7 +260,7 @@ abstract type AbstractVisionColor <: AbstractVision end
 
 binarize(y, pos_labels) = in.(y, Ref(pos_labels))
 
-function load(d::AbstractVision)
+function load(d::AbstractVision, reshape_func=flux_shape)
     train = load_dataset(d, :train)
     itrain, ivalid = splitobs(1:numobs(train); at=d.at_train, shuffle=true)
     test = load_dataset(d, :test)
@@ -268,9 +272,9 @@ function load(d::AbstractVision)
     y_valid = obsview(train.targets, ivalid)
 
     return (
-        ArrayDataset(flux_shape(x_train), flux_shape(binarize(y_train, pos))),
-        ArrayDataset(flux_shape(x_valid), flux_shape(binarize(y_valid, pos))),
-        ArrayDataset(flux_shape(test.features), flux_shape(binarize(test.targets, pos))),
+        ArrayDataset(reshape_func(x_train), reshape_func(binarize(y_train, pos))),
+        ArrayDataset(reshape_func(x_valid), reshape_func(binarize(y_valid, pos))),
+        ArrayDataset(reshape_func(test.features), reshape_func(binarize(test.targets, pos))),
     )
 end
 

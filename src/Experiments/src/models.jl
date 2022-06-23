@@ -1,9 +1,10 @@
 abstract type ModelType end
+abstract type DualModelType <: ModelType end
 
 # ------------------------------------------------------------------------------------------
 # linear models
 # ------------------------------------------------------------------------------------------
-struct Linear <: ModelType end
+struct Linear <: DualModelType end
 
 parse_type(::Val{:Linear}) = Linear
 
@@ -18,6 +19,15 @@ end
 function materialize(D::AbstractVision, ::Linear)
     return Chain(Flux.flatten, Dense(prod(obs_size(D)) => 1; bias=false))
 end
+
+materialize_dual(::Linear) = ClassificationAtTopDual.Linear()
+
+# ------------------------------------------------------------------------------------------
+# Gaussian
+# ------------------------------------------------------------------------------------------
+struct Gaussian <: DualModelType end
+
+materialize_dual(::Gaussian) = ClassificationAtTopDual.Gaussian()
 
 # ------------------------------------------------------------------------------------------
 # Efficient net, GoogLeNet, MobileNetv3

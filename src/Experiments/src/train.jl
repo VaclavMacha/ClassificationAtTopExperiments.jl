@@ -199,3 +199,70 @@ function eval_model(
         return y, s
     end
 end
+
+# train for dual problems
+function load_or_run(
+    dataset::DatasetType,
+    model_type::DualModelType,
+    loss_type::LossType,
+    train_config::TrainConfigDual;
+)
+
+    # Extract train config
+    seed = train_config.seed
+    force = train_config.force
+
+    # Generate dir
+    dir = datadir(
+        train_config.save_dir,
+        _string(dataset),
+        _string(train_config),
+        _string(model_type),
+        _string(loss_type),
+    )
+    solution = nothing
+
+    if isfile(solution_path(dir)) && !force
+        return load_checkpoint(solution_path(dir))
+    end
+    write_config(config_path(dir), dataset, model_type, loss_type, train_config)
+    reset_timer!(TO)
+
+    # Run
+    logger = generate_logger(dir)
+    with_logger(logger) do
+        @info """
+        Initialization:
+        ⋅ Dir: $(dir)
+        ⋅ Dataset: $(_string(dataset))
+        ⋅ Kernel: $(_string(model_type))
+        ⋅ Loss: $(_string(loss_type))
+        """
+
+        # Initialization
+        @timeit TO "Initialization" begin
+            Random.seed!(seed)
+            @timeit TO "Data Loading" begin
+                train, valid, test = load(dataset, dual_shape)
+                n_pos = sum(train.targets .== 1)
+            end
+            loss = materialize_dual(loss_type, n_pos)
+            kernel = materialize_dual(model_type)
+        end
+
+        solution = ClassificationAtTopDual.solve(
+            loss,
+            kernel,
+            getobs(train),
+            getobs(valid),
+            getobs(test);
+            epoch_max=train_config.epoch_max,
+            checkpoint_every=train_config.checkpoint_every,
+            p_update=train_config.p_update,
+            dir=dir,
+            ε=train_config.ε
+        )
+        save_checkpoint(solution_path(dir), solution)
+    end
+    return solution
+end

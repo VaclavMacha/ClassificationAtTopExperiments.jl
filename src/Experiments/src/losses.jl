@@ -72,6 +72,24 @@ function materialize(o::AbstractPatMat)
     return loss
 end
 
+function materialize_dual(o::AbstractPatMat, n_pos::Int)
+    τ = Float32(o.τ)
+    λ = Float32(o.λ)
+    ϑ = Float32(o.ϑ)
+    C = 1 / (λ * n_pos)
+
+    S = if o.surrogate == "Hinge"
+        ClassificationAtTopDual.Hinge
+    else
+        ClassificationAtTopDual.Quadratic
+    end
+    return if isa(o, PatMat)
+        ClassificationAtTopDual.PatMat(τ; ϑ, C, S)
+    else
+        ClassificationAtTopDual.PatMatNP(τ; ϑ, C, S)
+    end
+end
+
 # ------------------------------------------------------------------------------------------
 # TopPush, TopPushK, TopMeanτ, tauFPL
 # ------------------------------------------------------------------------------------------
@@ -122,6 +140,28 @@ function materialize(o::AbstractTopPush)
         λ/2 * sum(sqsum, pars) + AccuracyAtTopPrimal.fnr(y, s, t, l)
     end
     return loss
+end
+
+function materialize_dual(o::AbstractTopPush, n_pos::Int)
+    λ = Float32(o.λ)
+    C = 1 / (λ * n_pos)
+
+    S = if o.surrogate == "Hinge"
+        ClassificationAtTopDual.Hinge
+    else
+        ClassificationAtTopDual.Quadratic
+    end
+    return if isa(o, TopPush)
+        ClassificationAtTopDual.TopPush(; C, S)
+    elseif isa(o, TopPushK)
+        ClassificationAtTopDual.TopPushK(o.K; C, S)
+    elseif isa(o, TopMeanTau)
+        τ = Float32(o.τ)
+        ClassificationAtTopDual.TopMeanK(τ; C, S)
+    else
+        τ = Float32(o.τ)
+        ClassificationAtTopDual.TauFPL(τ; C, S)
+    end
 end
 
 # ------------------------------------------------------------------------------------------

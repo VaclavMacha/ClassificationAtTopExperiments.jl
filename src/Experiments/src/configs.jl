@@ -28,19 +28,35 @@ function write_config(path, dataset, model_type, loss_type, opt_type, train_conf
     write_config(path, dict)
 end
 
+function write_config(path, dataset, model_type, loss_type, train_config)
+    dict = Dict(
+        "dataset" => _dict(dataset),
+        "model" => _dict(model_type),
+        "loss" => _dict(loss_type),
+        "training" => _dict(train_config),
+    )
+    mkpath(dirname(path))
+    write_config(path, dict)
+end
+
 function load_config(path; update::Bool=false)
     dict = TOML.parsefile(path)
 
     dataset = parse_config(dict["dataset"])
     model_type = parse_config(dict["model"])
     loss_type = parse_config(dict["loss"])
-    opt_type = parse_config(dict["optimiser"])
     train_config = parse_config(dict["training"])
 
-    if update
-        write_config(path, dataset, model_type, loss_type, opt_type, train_config)
+    args = if haskey(dict, "optimiser")
+        opt_type = parse_config(dict["optimiser"])
+        (dataset, model_type, loss_type, opt_type, train_config)
+    else
+        (dataset, model_type, loss_type, train_config)
     end
-    return dataset, model_type, loss_type, opt_type, train_config
+    if update
+        write_config(path, args...)
+    end
+    return args
 end
 
 # directory strings
