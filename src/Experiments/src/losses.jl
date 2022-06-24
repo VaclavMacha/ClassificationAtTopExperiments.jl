@@ -160,7 +160,7 @@ function materialize_dual(o::AbstractTopPush, n_pos::Int)
         ClassificationAtTopDual.TopMeanK(τ; C, S)
     else
         τ = Float32(o.τ)
-        ClassificationAtTopDual.TauFPL(τ; C, S)
+        ClassificationAtTopDual.tauFPL(τ; C, S)
     end
 end
 

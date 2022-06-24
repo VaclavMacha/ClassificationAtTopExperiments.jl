@@ -27,6 +27,7 @@ materialize_dual(::Linear) = ClassificationAtTopDual.Linear()
 # ------------------------------------------------------------------------------------------
 struct Gaussian <: DualModelType end
 
+parse_type(::Val{:Gaussian}) = Gaussian
 materialize_dual(::Gaussian) = ClassificationAtTopDual.Gaussian()
 
 # ------------------------------------------------------------------------------------------

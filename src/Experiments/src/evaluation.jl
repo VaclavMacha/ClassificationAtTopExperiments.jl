@@ -302,7 +302,7 @@ function _load_solution(
         @warn "Missing configuration file: $(file_config)"
         return nothing
     end
-    _, _, loss, _, _ = load_config(file_config)
+    _, _, loss, _ = load_config(file_config)
     return load_checkpoint(file_solution), loss
 end
 
