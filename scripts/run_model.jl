@@ -1,15 +1,13 @@
 #!/usr/bin/env sh
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --cpus-per-task=16
 #=
 
 module load --ignore-cache Julia/1.7.2-linux-x86_64
 
-export JULIA_NUM_THREADS=32
 export DATADEPS_ALWAYS_ACCEPT= "true"
 
-srun --unbuffer julia --color=no --startup-file=no "${BASH_SOURCE[0]}" "$@"
+srun --unbuffer julia --color=no --startup-file=no --threads=auto "${BASH_SOURCE[0]}" "$@"
 exit
 =#
 
