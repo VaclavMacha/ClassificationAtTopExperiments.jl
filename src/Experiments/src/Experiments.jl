@@ -45,6 +45,7 @@ export PatMat, PatMatNP
 export TopPush, TopPushK, TopMeanTau, TauFPL
 export Grill, GrillNP
 export DeepTopPush, DeepTopPushCross
+export SVM
 
 export Linear
 export Gaussian
