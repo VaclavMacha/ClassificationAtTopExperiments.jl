@@ -29,6 +29,7 @@ function load_or_run(
     solution = nothing
 
     if isfile(solution_path(dir)) && !force
+        @info "Loading existing solution"
         return load_checkpoint(solution_path(dir))
     end
     write_config(config_path(dir), dataset, model_type, loss_type, opt_type, train_config)
@@ -175,7 +176,6 @@ function eval_model(
     device,
 )
 
-    batch_size = loader.batch_size
     if length(loader) == 1
         data, = iterate(loader)
         inds, (x, y) = data
@@ -223,6 +223,7 @@ function load_or_run(
     solution = nothing
 
     if isfile(solution_path(dir)) && !force
+        @info "Loading existing solution"
         return load_checkpoint(solution_path(dir))
     end
     write_config(config_path(dir), dataset, model_type, loss_type, train_config)
