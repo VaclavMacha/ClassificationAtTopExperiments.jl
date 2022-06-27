@@ -178,7 +178,7 @@ function list_subdirs(dirs, level::Int=4)
 end
 
 function _select_best(df, col::Symbol; by=argmax)
-    inds = findall(df.split .== :valid)
+    inds = findall(Symbol.(df.split) .== :valid)
     ind = by(df[inds, col])
     id = df.id[inds[ind]]
     return df[df.id.==id, :]
@@ -200,7 +200,7 @@ function select_best(
         groupby(df, [:dataset, :loss]),
         sdf -> _select_best(sdf, metric)
     )
-    df_best = df_best[df_best.split.==split, :]
+    df_best = df_best[Symbol.(df_best.split) .== split, :]
     select!(df_best, Not([:split, :id]))
 
     # convert to ranks
