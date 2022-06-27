@@ -106,7 +106,7 @@ end
     surrogate::String = "Hinge"
 end
 
-@kwdef struct TopMeanTau <: AbstractTopPush
+@kwdef struct TopMeanK <: AbstractTopPush
     τ::Float64 = 0.1
     λ::Float64 = 1e-3
     surrogate::String = "Hinge"
@@ -120,12 +120,12 @@ end
 
 parse_type(::Val{:TopPush}) = TopPush
 parse_type(::Val{:TopPushK}) = TopPushK
-parse_type(::Val{:TopMeanTau}) = TopMeanTau
+parse_type(::Val{:TopMeanK}) = TopMeanK
 parse_type(::Val{:TauFPL}) = TauFPL
 
 materialize_threshold(::TopPush) = AccuracyAtTopPrimal.TopPush()
 materialize_threshold(o::TopPushK) = AccuracyAtTopPrimal.TopPushK(o.K)
-materialize_threshold(o::TopMeanTau) = AccuracyAtTopPrimal.TopMean(Float32(o.τ))
+materialize_threshold(o::TopMeanK) = AccuracyAtTopPrimal.TopMean(Float32(o.τ))
 materialize_threshold(o::TauFPL) = AccuracyAtTopPrimal.τFPL(Float32(o.τ))
 
 function materialize(o::AbstractTopPush)
@@ -155,7 +155,7 @@ function materialize_dual(o::AbstractTopPush, n_pos::Int)
         ClassificationAtTopDual.TopPush(; C, S)
     elseif isa(o, TopPushK)
         ClassificationAtTopDual.TopPushK(o.K; C, S)
-    elseif isa(o, TopMeanTau)
+    elseif isa(o, TopMeanK)
         τ = Float32(o.τ)
         ClassificationAtTopDual.TopMeanK(τ; C, S)
     else

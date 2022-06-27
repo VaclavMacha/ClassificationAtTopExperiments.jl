@@ -42,7 +42,7 @@ export SVHN2, SVHN2Extra
 
 export CrossEntropy
 export PatMat, PatMatNP
-export TopPush, TopPushK, TopMeanTau, TauFPL
+export TopPush, TopPushK, TopMeanK, TauFPL
 export Grill, GrillNP
 export DeepTopPush, DeepTopPushCross
 export SVM
