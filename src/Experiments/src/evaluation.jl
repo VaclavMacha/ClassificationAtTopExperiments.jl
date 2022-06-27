@@ -13,13 +13,22 @@ end
 _dataframe(path::AbstractString) = _dataframe(TOML.parsefile(path))
 
 function _dataframe(dict::AbstractDict)
-    return DataFrame([
-        _dataframe(parse_config(dict["dataset"]), "dataset")...,
-        _dataframe(parse_config(dict["model"]), "model")...,
-        _dataframe(parse_config(dict["loss"]), "loss")...,
-        _dataframe(parse_config(dict["optimiser"]), "optimiser")...,
-        _dataframe(parse_config(dict["training"]))...,
-    ])
+    return if haskey(dict, :optimiser)
+        DataFrame([
+            _dataframe(parse_config(dict["dataset"]), "dataset")...,
+            _dataframe(parse_config(dict["model"]), "model")...,
+            _dataframe(parse_config(dict["loss"]), "loss")...,
+            _dataframe(parse_config(dict["optimiser"]), "optimiser")...,
+            _dataframe(parse_config(dict["training"]))...,
+        ])
+    else
+        DataFrame([
+            _dataframe(parse_config(dict["dataset"]), "dataset")...,
+            _dataframe(parse_config(dict["model"]), "model")...,
+            _dataframe(parse_config(dict["loss"]), "loss")...,
+            _dataframe(parse_config(dict["training"]))...,
+        ])
+    end
 end
 
 # ------------------------------------------------------------------------------------------
