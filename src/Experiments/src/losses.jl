@@ -107,13 +107,13 @@ end
 end
 
 @kwdef struct TopMeanK <: AbstractTopPush
-    τ::Float64 = 0.1
+    τ::Float64 = 0.01
     λ::Float64 = 1e-3
     surrogate::String = "Hinge"
 end
 
 @kwdef struct TauFPL <: AbstractTopPush
-    τ::Float64 = 0.1
+    τ::Float64 = 0.01
     λ::Float64 = 1e-3
     surrogate::String = "Hinge"
 end
