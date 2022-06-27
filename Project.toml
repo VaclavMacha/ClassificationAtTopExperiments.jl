@@ -1,4 +1,4 @@
-name = "SteganographyExperiments.jl"
+name = "ClassificationAtTopExperiments.jl"
 
 [deps]
 AccuracyAtTop = "99d982fd-5277-407e-85b7-ffc618e6d0f5"

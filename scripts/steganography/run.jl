@@ -1,5 +1,5 @@
 using DrWatson
-@quickactivate("SteganographyExperiments.jl")
+@quickactivate("ClassificationAtTopExperiments.jl")
 
 using Pkg
 Pkg.instantiate()

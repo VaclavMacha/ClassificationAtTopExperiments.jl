@@ -27,8 +27,8 @@ sleep(s)
 
 using DrWatson
 quickactivate(
-    "/home/machava2/projects/SteganographyExperiments.jl",
-    "SteganographyExperiments.jl",
+    "/home/machava2/projects/ClassificationAtTopExperiments.jl",
+    "ClassificationAtTopExperiments.jl",
 )
 
 using Experiments

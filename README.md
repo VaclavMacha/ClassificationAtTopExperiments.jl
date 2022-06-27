@@ -1,8 +1,8 @@
-# SteganographyExperiments.jl
+# ClassificationAtTopExperiments.jl
 
 This code base is using the Julia Language and [DrWatson](https://juliadynamics.github.io/DrWatson.jl/stable/)
 to make a reproducible scientific project named
-> SteganographyExperiments.jl
+> ClassificationAtTopExperiments.jl
 
 To (locally) reproduce this project, do the following:
 
