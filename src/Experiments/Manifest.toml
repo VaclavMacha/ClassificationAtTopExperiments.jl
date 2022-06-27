@@ -151,7 +151,7 @@ version = "0.1.3"
 
 [[deps.ClassificationAtTopDual]]
 deps = ["BSON", "KernelFunctions", "LIBSVM", "ProgressMeter", "Random", "Roots", "Statistics", "TimerOutputs"]
-git-tree-sha1 = "c12b9f298fe3ebd896b3dbc25cc2d00d810a3f6d"
+git-tree-sha1 = "498b27cc3a6bc01014d682a4e10e98e4c820f4c4"
 repo-rev = "main"
 repo-url = "https://github.com/VaclavMacha/ClassificationAtTopDual"
 uuid = "655c3ecf-4336-4e22-841c-47f554d60d87"
