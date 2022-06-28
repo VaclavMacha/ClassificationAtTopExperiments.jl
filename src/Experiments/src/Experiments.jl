@@ -58,7 +58,7 @@ export OptDescent, OptADAM, OptRMSProp
 
 export TrainConfig, TrainConfigDual
 
-export load_or_run
+export load_or_run, is_solved
 export load_config, write_config
 export load_checkpoint, save_checkpoint
 export evaluation, join_cols, tpr_at_fpr, tpr_at_k, pos_at_top_k, round_perc, rank_table

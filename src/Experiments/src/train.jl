@@ -1,3 +1,42 @@
+function experiment_dir(
+    dataset::DatasetType,
+    model_type::ModelType,
+    loss_type::LossType,
+    opt_type::OptimiserType,
+    train_config::TrainConfig;
+)
+    return datadir(
+        train_config.save_dir,
+        _string(dataset),
+        _string(train_config),
+        _string(opt_type),
+        _string(model_type),
+        _string(loss_type),
+    )
+end
+
+function experiment_dir(
+    dataset::DatasetType,
+    model_type::ModelType,
+    loss_type::LossType,
+    train_config::TrainConfigDual;
+)
+    return datadir(
+        train_config.save_dir,
+        _string(dataset),
+        _string(train_config),
+        _string(model_type),
+        _string(loss_type),
+    )
+
+end
+
+function is_solved(path::AbstractString, force::Bool=false)
+    args = load_config(path; update=false)
+    dir = experiment_dir(args...)
+    return isfile(solution_path(dir)) && !force
+end
+
 load_or_run(path) = load_or_run(load_config(path)...)
 
 function load_or_run(
@@ -18,14 +57,7 @@ function load_or_run(
     device = train_config.device == "GPU" ? Flux.gpu : Flux.cpu
 
     # Generate dir
-    dir = datadir(
-        train_config.save_dir,
-        _string(dataset),
-        _string(train_config),
-        _string(opt_type),
-        _string(model_type),
-        _string(loss_type),
-    )
+    dir = experiment_dir(dataset, model_type, loss_type, opt_type, train_config)
     solution = nothing
 
     if isfile(solution_path(dir)) && !force
@@ -213,13 +245,7 @@ function load_or_run(
     force = train_config.force
 
     # Generate dir
-    dir = datadir(
-        train_config.save_dir,
-        _string(dataset),
-        _string(train_config),
-        _string(model_type),
-        _string(loss_type),
-    )
+    dir = experiment_dir(dataset, model_type, loss_type, train_config)
     solution = nothing
 
     if isfile(solution_path(dir)) && !force
