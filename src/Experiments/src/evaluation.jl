@@ -305,11 +305,11 @@ function _load_solution(
 
     if !isfile(file_solution)
         @warn "Missing solution file: $(file_solution)"
-        return nothing
+        return (nothing, nothing)
     end
     if !isfile(file_config)
         @warn "Missing configuration file: $(file_config)"
-        return nothing
+        return (nothing, nothing)
     end
     _, _, loss, _ = load_config(file_config)
     return load_checkpoint(file_solution), loss
@@ -324,6 +324,23 @@ function plot_roc!(plt, d::Dict, key; kwargs...)
     return rocplot!(plt, y, s, t; kwargs...)
 end
 
+function log_threshold(y, s, xlims; len::Int=300)
+    s_unique = unique(s[y.==0])
+    ts = partialsort(s_unique, 1:min(length(s_unique), 100); rev=true)
+    qs = exp10.(range(log10(xlims[1]), log10(min(1, xlims[2])); length=max(0, len - length(ts))))
+    return vcat(ts, threshold_at_fpr(y, s, qs)) |> unique |> sort
+end
+
+function fill_missing(x, len=length(x))
+    return vcat(vec(x), fill(missing, len - length(x)))
+end
+
+function get_roccurve(d::Dict, key; xlims = (1e-6, 1), len::Int = 300)
+    y, s = extract_scores(d, key)
+    ts = log_threshold(y, s, xlims; len)
+    return fill_missing.(roccurve(y, s, ts), len)
+end
+
 function plot_roc(
     maindir::String,
     exclude::LossType...;
@@ -335,12 +352,38 @@ function plot_roc(
     plt = plot()
     for dir in readdir(maindir; join=true)
         isdir(dir) || continue
-        out = _load_solution(dir; epoch)
-        if !isnothing(out)
-            sol, loss = out
+        sol, loss = _load_solution(dir; epoch)
+        if !isnothing(loss)
             in(loss, exclude) && continue
             plot_roc!(plt, sol, key; label=_string(loss), kwargs...)
         end
     end
     return plt
+end
+
+function get_roc(
+    dir::String;
+    epoch::Int=-1,
+    kwargs...
+)
+
+    sol, loss = _load_solution(dir; epoch)
+    if isnothing(loss)
+        @warn "solution not found"
+        return (nothing, nothing)
+    end
+
+    # extract roc curves
+    train = get_roccurve(sol, :train; kwargs...)
+    valid = get_roccurve(sol, :valid; kwargs...)
+    test = get_roccurve(sol, :test; kwargs...)
+
+    return _string(loss), DataFrame(
+        fpr_train=train[1],
+        tpr_train=train[2],
+        fpr_valid=valid[1],
+        tpr_valid=valid[2],
+        fpr_test=test[1],
+        tpr_test=test[2],
+    )
 end
