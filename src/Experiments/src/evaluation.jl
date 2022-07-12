@@ -57,6 +57,11 @@ function tpr_at_k(y, s, k::Int=1)
     return true_positive_rate(y, s, t)
 end
 
+function roc_auc(y, s)
+    cms = ConfusionMatrix(y, s, sort(unique(s)))
+    return auc_trapezoidal(false_positive_rate(cms), true_positive_rate(cms))
+end
+
 round_perc(val, digits=2) = round(100 * val; digits)
 
 # ------------------------------------------------------------------------------------------
