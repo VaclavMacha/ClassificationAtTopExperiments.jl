@@ -93,7 +93,7 @@ function load_or_run(
         # Batch loader
         batch_size = batch_neg + batch_pos
         if batch_size == 0
-            loader = (getobs(train), )
+            loader = (getobs(train),)
         else
             buffer = isa(model_type, DeepTopPush) ? () -> Int[] : AccuracyAtTop.buffer_inds
             loader = BatchLoader(train; buffer, batch_neg, batch_pos)
@@ -124,6 +124,8 @@ function load_or_run(
         )
 
         # Training
+        flag = false
+        local training_loss
         start!(p, optionals()...)
         for epoch in 1:epoch_max
             state[:epoch] += 1
@@ -138,22 +140,28 @@ function load_or_run(
                     @timeit TO "Gradient step" begin
                         grads = Flux.Zygote.gradient(pars) do
                             s = cpu(model(x))
-                            loss(y, s, pars)
+                            training_loss = loss(y, s, pars)
+                            return training_loss
                         end
                         Flux.Optimise.update!(opt, pars, grads)
                         progress!(p, iter, epoch, optionals()...)
                     end
                     free_memory!(x)
+
+                    # break if corrupted solution
+                    flag = isnan(training_loss) || isinf(training_loss)
+                    flag && break
                 end
             end
 
             # checkpoint
-            if mod(epoch, checkpoint_every) == 0 || epoch == epoch_max
+            if mod(epoch, checkpoint_every) == 0 || epoch == epoch_max || flag
                 solution = checkpoint!(state, model, pars, loss)
             end
             @timeit TO "Garbage Collector" begin
                 GC.gc(true)
             end
+            flag && break
         end
         finish!(p, optionals()...)
         save_checkpoint(solution_path(dir), solution)
