@@ -6,6 +6,7 @@ AccuracyAtTopPrimal = "fe3dcc9b-297f-427f-9453-e9e3c6e3e222"
 ClassificationAtTopDual = "655c3ecf-4336-4e22-841c-47f554d60d87"
 DrWatson = "634d3b9d-ee7a-5ddf-bec9-22491ea816e1"
 EfficientNet = "8ae15c95-d670-4eca-a723-7364633ab054"
+Evaluation = "297065ec-f596-4b61-a215-5355053457d6"
 Experiments = "0ed54c3c-39b1-4574-89de-30629e1c012c"
 
 [compat]

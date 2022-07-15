@@ -101,13 +101,12 @@ end
 function evaluation(
     path::AbstractString;
     metrics::Vector{<:Pair}=Pair[],
-    level::Int=4,
     id_start::Int=0,
     kwargs...
 )
 
     if isdir(path)
-        dirs = list_subdirs(path, level)
+        dirs = list_subdirs(path)
         isempty(dirs) && return nothing
         dfs = @showprogress map(enumerate(dirs)) do (id, dir)
             return vcat(
@@ -166,19 +165,22 @@ function _join_cols!(df, tojoin::Pair...)
     end
 end
 
-function _list_subdirs(dir::AbstractString)
-    return filter(isdir, readdir(dir; join=true))
-end
-
-function _list_subdirs(dirs::Vector{String})
-    return reduce(vcat, _list_subdirs.(dirs))
-end
-
-function list_subdirs(dirs, level::Int=4)
-    return if level == 0
-        _list_subdirs(dirs)
+function list_subdirs(dir::AbstractString)
+    fls = readdir(dir; join=false)
+    if "solutions.bson" in fls || "checkpoints" in fls
+        return [dir]
     else
-        list_subdirs(_list_subdirs(dirs), level - 1)
+        return list_subdirs(filter(isdir, joinpath.(dir, fls)))
+    end
+end
+
+function list_subdirs(dirs::Vector{String})
+    lst = map(list_subdirs, dirs)
+    filter!(!isempty, lst)
+    return if isempty(lst)
+        return lst
+    else
+        return reduce(vcat, lst)
     end
 end
 
@@ -195,7 +197,7 @@ function select_best(
     split::Symbol=:test,
     wide::Bool=true,
     rank::Bool=false,
-    rank_func::Function = x -> tiedrank(x; rev=true)
+    rank_func::Function=x -> tiedrank(x; rev=true)
 )
 
     df = select(df_in, [:id, :dataset, :loss, :split, metric])
@@ -205,7 +207,7 @@ function select_best(
         groupby(df, [:dataset, :loss]),
         sdf -> _select_best(sdf, metric)
     )
-    df_best = df_best[Symbol.(df_best.split) .== split, :]
+    df_best = df_best[Symbol.(df_best.split).==split, :]
     select!(df_best, Not([:split, :id]))
 
     # convert to ranks
@@ -340,7 +342,7 @@ function fill_missing(x, len=length(x))
     return vcat(vec(x), fill(missing, len - length(x)))
 end
 
-function get_roccurve(d::Dict, key; xlims = (1e-6, 1), len::Int = 300)
+function get_roccurve(d::Dict, key; xlims=(1e-6, 1), len::Int=300)
     y, s = extract_scores(d, key)
     ts = log_threshold(y, s, xlims; len)
     return fill_missing.(roccurve(y, s, ts), len)
