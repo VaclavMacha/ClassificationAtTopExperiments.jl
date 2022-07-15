@@ -30,6 +30,7 @@ end
 function sbatch_array(
     file::AbstractString,
     dir::AbstractString;
+    mpi_jobs::Int = 1,
     zero_indexing::Bool=false,
     logdir::AbstractString=dirname(file),
     output::AbstractString=joinpath(logdir, "%A-%a.log"),
@@ -37,6 +38,9 @@ function sbatch_array(
 )
     sbatch_args = parse_args(kwargs)
     k = length(readdir(dir))
+    if mpi_jobs > 1
+        k = ceil(Int, k/mpi_jobs)
+    end
     array = zero_indexing ? "--array=0-$(k-1)" : "--array=1-$(k)"
 
     mkpath(dirname(output))
