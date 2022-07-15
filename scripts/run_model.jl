@@ -3,9 +3,11 @@
 #SBATCH --ntasks-per-node=1
 #=
 
-module load --ignore-cache Julia/1.7.2-linux-x86_64
+module load cuDNN
+export JULIA_CUDA_USE_BINARYBUILDER=false
 
-export DATADEPS_ALWAYS_ACCEPT= "true"
+module load --ignore-cache Julia
+export DATADEPS_ALWAYS_ACCEPT=true
 
 srun --unbuffer julia --color=no --startup-file=no --threads=auto "${BASH_SOURCE[0]}" "$@"
 exit
