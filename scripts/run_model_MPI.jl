@@ -1,7 +1,6 @@
 #!/usr/bin/env sh
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=4
-#SBATCH --mem=9G
 #=
 
 module load fosscuda
@@ -9,6 +8,7 @@ module load cuDNN/8.0.5.39-CUDA-11.1.1
 module load --ignore-cache Julia
 
 export OMPI_MCA_mpi_warn_on_fork=0
+export JULIA_CUDA_MEMORY_POOL=none
 export JULIA_CUDA_USE_BINARYBUILDER=false
 export DATADEPS_ALWAYS_ACCEPT=true
 
@@ -42,6 +42,10 @@ else
     )
 
     using Experiments
+
+    function Experiments.datasetsdir(args...)
+        return joinpath("/mnt/beegfs/gpu/temporary/machava2/datasets", args...)
+    end
 
     try
         load_or_run(path)
