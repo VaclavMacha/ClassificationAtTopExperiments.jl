@@ -16,7 +16,7 @@ using Reexport
 using ProgressMeter
 using TOML
 
-using Experiments: LossType, load_checkpoint, parse_config
+using Experiments: LossType, load_checkpoint, parse_config, _string
 using Experiments: solution_path, config_path, timer_path, explog_path, errlog_path
 
 export evaluation, join_cols, round_perc, rank_table
