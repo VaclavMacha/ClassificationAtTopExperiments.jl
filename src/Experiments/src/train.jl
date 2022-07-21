@@ -228,8 +228,14 @@ function eval_model(
         n = numobs(loader)
         s = zeros(Float32, 1, n)
         y = similar(loader.data.targets, 1, n)
+        k = length(loader)
+        K = ceil(Int, k / 100)
 
-        for data in loader
+        @info "Evaluation:"
+        for (i, data) in enumerate(loader)
+            if mod(i, K) == 0
+                @info "Progress: $(i)/$(k)"
+            end
             inds, (xi, yi) = data
             xi = device(xi)
             y[inds] .= yi[:]
