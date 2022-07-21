@@ -361,7 +361,7 @@ uuid = "251d5f9e-10c1-4699-ba24-e0ad168fa3e4"
 version = "0.2.1"
 
 [[deps.Evaluation]]
-deps = ["AccuracyAtTop", "AccuracyAtTopPrimal", "CSV", "ClassificationAtTopDual", "DataFrames", "Dates", "EfficientNet", "EvalMetrics", "Experiments", "Measurements", "Plots", "ProgressMeter", "Reexport", "Statistics", "StatsBase", "TOML"]
+deps = ["AccuracyAtTop", "AccuracyAtTopPrimal", "CSV", "ClassificationAtTopDual", "DataFrames", "Dates", "Distributions", "EfficientNet", "EvalMetrics", "Experiments", "Measurements", "Plots", "ProgressMeter", "Reexport", "Statistics", "StatsBase", "TOML"]
 path = "src/Evaluation"
 uuid = "297065ec-f596-4b61-a215-5355053457d6"
 version = "0.1.0"

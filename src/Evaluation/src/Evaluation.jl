@@ -5,6 +5,7 @@ using Reexport
 @reexport using CSV
 @reexport using DataFrames
 @reexport using Dates
+@reexport using Distributions
 @reexport using EvalMetrics
 @reexport using Measurements
 @reexport using Plots
