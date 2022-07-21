@@ -22,6 +22,7 @@ end
 abstract type DatasetType end
 
 load_with_threads(::DatasetType) = false
+round_perc(val, digits=2) = round(100 * val; digits)
 
 function summary_dataset(d::DatasetType)
     train, valid, test = load(d)
@@ -175,10 +176,16 @@ jmipoddir(args...) = datasetsdir("JMiPOD", args...)
 actordir(id::Int, args...) = jmipoddir("actor$(lpad(id, 5, "0"))", args...)
 list_jpgs(dir) = filter(file -> endswith(file, ".jpg"), readdir(dir; join=true))
 
-function load_image(path)
-    img = jpeg_decode(path)
+load_image(path) = image_to_array(jpeg_decode(path))
+
+function image_to_array(img::AbstractMatrix{<:RGB})
     return PermutedDimsArray(channelview(img), (3, 2, 1))
 end
+
+function image_to_array(img::AbstractMatrix{<:Gray})
+    return image_to_array(convert.(RGB, img))
+end
+
 
 function load(d::AbstractJMiPOD)
     ids = get_ids(d)
