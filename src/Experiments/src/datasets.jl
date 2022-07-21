@@ -186,10 +186,13 @@ function load(d::AbstractJMiPOD)
     x_cover = String[]
     x_stego = String[]
     for id in ids
+        isdir(actordir(id)) || continue
         cover = list_jpgs(actordir(id))
         append!(x_cover, cover)
 
         type = lpad(round(Int, 100 * d.payload), 3, "0")
+
+        isdir(actordir(id, "stego-$(type)")) || continue
         stego = list_jpgs(actordir(id, "stego-$(type)"))
         append!(x_stego, stego)
     end
