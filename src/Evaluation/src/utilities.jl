@@ -78,22 +78,27 @@ function evaluation(
     file_solution = solution_path(dir, epoch)
     file_config = config_path(dir)
 
-    if !isfile(file_solution)
-        @warn "Missing solution file: $(file_solution)"
-        return nothing
-    end
     if !isfile(file_config)
         @warn "Missing configuration file: $(file_config)"
         return nothing
     end
+
     df = _dataframe(file_config)
     insertcols!(df, 1, :id => id, :split => split)
     epoch = epoch < 0 ? df.epoch_max : epoch
     insertcols!(df, findfirst(==(:epoch_max), propertynames(df)), :epoch => epoch)
-    y, s = extract_scores(load_checkpoint(file_solution), split)
 
-    for (metric_name, metric_func) in metrics
-        df[!, metric_name] .= metric_func(y, s)
+    if isfile(file_solution)
+        y, s = extract_scores(load_checkpoint(file_solution), split)
+
+        for (metric_name, metric_func) in metrics
+            df[!, metric_name] .= metric_func(y, s)
+        end
+    else
+        @warn "Missing solution file: $(file_solution)"
+        for (metric_name, metric_func) in metrics
+            df[!, metric_name] .= 0.0
+        end
     end
     return df
 end
@@ -167,7 +172,7 @@ end
 
 function list_subdirs(dir::AbstractString)
     fls = readdir(dir; join=false)
-    if "solutions.bson" in fls || "checkpoints" in fls
+    if "solution.bson" in fls || "checkpoints" in fls || "config.toml" in fls
         return [dir]
     else
         return list_subdirs(filter(isdir, joinpath.(dir, fls)))
