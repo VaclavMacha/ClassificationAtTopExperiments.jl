@@ -54,6 +54,7 @@ function load_or_run(
     checkpoint_every = train_config.checkpoint_every
     batch_pos = train_config.batch_pos
     batch_neg = train_config.batch_neg
+    eval_all = train_config.eval_all
     device = train_config.device == "GPU" ? Flux.gpu : Flux.cpu
 
     # Generate dir
@@ -115,13 +116,17 @@ function load_or_run(
             :valid_loader => EvalLoader(valid, batch_size),
             :test_loader => EvalLoader(test, batch_size),
         )
-        solution = checkpoint!(state, model, pars, loss)
+        solution = checkpoint!(state, model, pars, loss; eval_all)
 
-        optionals = () -> (
-            "Loss train" => state[:loss_train][end],
-            "Loss valid" => state[:loss_valid][end],
-            "Loss test" => state[:loss_test][end],
-        )
+        if !any(isempty.((state[:loss_train], state[:loss_valid], state[:loss_test])))
+            optionals = () -> (
+                "Loss train" => state[:loss_train][end],
+                "Loss valid" => state[:loss_valid][end],
+                "Loss test" => state[:loss_test][end],
+            )
+        else
+            optionals = () -> tuple()
+        end
 
         # Training
         flag = false
@@ -156,7 +161,8 @@ function load_or_run(
 
             # checkpoint
             if mod(epoch, checkpoint_every) == 0 || epoch == epoch_max || flag
-                solution = checkpoint!(state, model, pars, loss)
+                evl = epoch == epoch_max ? true : eval_all
+                solution = checkpoint!(state, model, pars, loss; eval_all=evl)
             end
             @timeit TO "Garbage Collector" begin
                 GC.gc(true)
@@ -169,43 +175,44 @@ function load_or_run(
     return solution
 end
 
-function checkpoint!(state, model, pars, loss)
-    @timeit TO "Evaluation" begin
-        device = state[:device]
-        train = state[:train_loader]
-        valid = state[:valid_loader]
-        test = state[:test_loader]
-        @timeit TO "Train scores" y_train, s_train = eval_model(train, model, device)
-        @timeit TO "Valid scores" y_valid, s_valid = eval_model(valid, model, device)
-        @timeit TO "Test scores" y_test, s_test = eval_model(test, model, device)
+function checkpoint!(state, model, pars, loss; eval_all::Bool=true)
+    solution = Dict(
+        :model => deepcopy(cpu(model)),
+        :epoch => state[:epoch],
+    )
 
-        loss_train = get!(state, :loss_train, Float32[])
-        loss_valid = get!(state, :loss_valid, Float32[])
-        loss_test = get!(state, :loss_test, Float32[])
+    loss_train = get!(state, :loss_train, Float32[])
+    loss_valid = get!(state, :loss_valid, Float32[])
+    loss_test = get!(state, :loss_test, Float32[])
 
-        @timeit TO "Loss" begin
-            append!(loss_train, loss(y_train, s_train, pars))
-            append!(loss_valid, loss(y_valid, s_valid, pars))
-            append!(loss_test, loss(y_test, s_test, pars))
+    if eval_all
+        @timeit TO "Evaluation" begin
+            device = state[:device]
+            train = state[:train_loader]
+            valid = state[:valid_loader]
+            test = state[:test_loader]
+            @timeit TO "Train scores" y_train, s_train = eval_model(train, model, device)
+            @timeit TO "Valid scores" y_valid, s_valid = eval_model(valid, model, device)
+            @timeit TO "Test scores" y_test, s_test = eval_model(test, model, device)
+
+            @timeit TO "Loss" begin
+                append!(loss_train, loss(y_train, s_train, pars))
+                append!(loss_valid, loss(y_valid, s_valid, pars))
+                append!(loss_test, loss(y_test, s_test, pars))
+            end
+
+            solution[:train] = Dict(:y => cpu(y_train), :s => cpu(s_train))
+            solution[:valid] = Dict(:y => cpu(y_valid), :s => cpu(s_valid))
+            solution[:test] = Dict(:y => cpu(y_test), :s => cpu(s_test))
+            solution[:loss_train] = loss_train
+            solution[:loss_valid] = loss_valid
+            solution[:loss_test] = loss_test
         end
-
-        epoch = state[:epoch]
-        path = solution_path(state[:dir], epoch)
+    end
+    @timeit TO "Saving" begin
+        path = solution_path(state[:dir], state[:epoch])
         mkpath(dirname(path))
-
-        @timeit TO "Saving" begin
-            solution = Dict(
-                :model => deepcopy(cpu(model)),
-                :epoch => epoch,
-                :train => Dict(:y => cpu(y_train), :s => cpu(s_train)),
-                :valid => Dict(:y => cpu(y_valid), :s => cpu(s_valid)),
-                :test => Dict(:y => cpu(y_test), :s => cpu(s_test)),
-                :loss_train => loss_train,
-                :loss_valid => loss_valid,
-                :loss_test => loss_test,
-            )
-            save_checkpoint(path, solution)
-        end
+        save_checkpoint(path, solution)
     end
     return solution
 end
@@ -229,7 +236,7 @@ function eval_model(
         s = zeros(Float32, 1, n)
         y = similar(loader.data.targets, 1, n)
         k = length(loader)
-        K = ceil(Int, k / 100)
+        K = ceil(Int, k / 10)
 
         @info "Evaluation:"
         for (i, data) in enumerate(loader)

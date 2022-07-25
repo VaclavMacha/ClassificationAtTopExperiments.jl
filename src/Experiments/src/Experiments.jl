@@ -96,10 +96,13 @@ save_checkpoint(path, model) = BSON.bson(path, model)
     force::Bool = false
     device::String = "CPU"
     save_dir::String = "results"
+    eval_all::Bool = true
 end
 
 parse_type(::Val{:TrainConfig}) = TrainConfig
-_exclude(::Type{TrainConfig}) = (:checkpoint_every, :device, :force, :save_dir)
+function _exclude(::Type{TrainConfig})
+    return (:checkpoint_every, :device, :force, :save_dir, :eval_all)
+end
 
 @kwdef struct TrainConfigDual
     seed::Int = 1234
