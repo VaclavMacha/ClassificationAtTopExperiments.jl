@@ -8,6 +8,7 @@ module load cuDNN/8.0.5.39-CUDA-11.1.1
 module load --ignore-cache Julia
 
 export JULIA_CUDA_USE_BINARYBUILDER=false
+export JULIA_CUDA_MEMORY_POOL=none
 export DATADEPS_ALWAYS_ACCEPT=true
 
 srun --unbuffer julia --color=no --startup-file=no --threads=auto "${BASH_SOURCE[0]}" "$@"
@@ -33,6 +34,9 @@ quickactivate(
     "/home/machava2/projects/ClassificationAtTopExperiments.jl",
     "ClassificationAtTopExperiments.jl",
 )
+
+using Pkg
+Pkg.instantiate()
 
 using Experiments
 
