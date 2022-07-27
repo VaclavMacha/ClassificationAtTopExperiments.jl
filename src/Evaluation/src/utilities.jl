@@ -399,3 +399,29 @@ function get_roc(
         tpr_test=test[2],
     )
 end
+
+plot_dual_loss(d::Dict; kwargs...) = plot_dual_loss!(plot(), d; kwargs...)
+plot_dual_loss!(d::Dict; kwargs...) = plot_dual_loss!(current(), d; kwargs...)
+
+function plot_dual_loss!(plt, d::Dict; inds=:, kwargs...)
+    Lp = d[:loss_primal][inds]
+    Ld = d[:loss_dual][inds]
+
+    plot!(plt, Lp; label="Loss primal (min = $(round(minimum(Lp); digits=2))", kwargs...)
+    plot!(plt, Ld; label="Loss dual (max = $(round(maximum(Ld); digits=2))", kwargs...)
+    return plt
+end
+
+plot_dual_gap(d::Dict; kwargs...) = plot_dual_gap!(plot(), d; kwargs...)
+plot_dual_gap!(d::Dict; kwargs...) = plot_dual_gap!(current(), d; kwargs...)
+
+function plot_dual_gap!(plt, d::Dict; normed::Bool = true, inds=:, kwargs...)
+    gap = d[:loss_gap]
+    if normed
+        gap = gap[inds] / gap[1]
+    else
+        gap = gap[inds]
+    end
+    plot!(plt, gap; label="Dual gap (min = $(round(minimum(gap); digits=2)))", kwargs...)
+    return plt
+end
