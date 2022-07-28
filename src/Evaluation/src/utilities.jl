@@ -198,44 +198,41 @@ end
 
 function select_best(
     df_in::DataFrame,
-    metric::Symbol;
-    split::Symbol=:test,
-    wide::Bool=true,
-    rank::Bool=false,
-    rank_func::Function=x -> tiedrank(x; rev=true)
+    metric::Symbol,
+    group_cols::Vector{Symbol};
+    split::Symbol=:test
 )
 
-    df = select(df_in, [:id, :dataset, :loss, :split, metric])
+    df = select(df_in, [:id, :split, group_cols..., metric])
 
     # select best parameters for loss
     df_best = combine(
-        groupby(df, [:dataset, :loss]),
+        groupby(df, [group_cols...]),
         sdf -> _select_best(sdf, metric)
     )
     df_best = df_best[Symbol.(df_best.split).==split, :]
     select!(df_best, Not([:split, :id]))
 
-    # convert to ranks
-    if rank
-        df_best = transform(
-            groupby(df_best, :dataset),
-            :loss,
-            metric => rank_func => metric,
-        )
-    end
-    return wide ? DataFrames.unstack(df_best, :dataset, :loss, metric) : df_best
+    return df_best
 end
 
 function rank_table(
     df::DataFrame,
     metrics::Vector{Symbol}=Symbol[];
     split::Symbol=:test,
-    kwargs...
+    rank_func::Function=x -> tiedrank(x; rev=true)
 )
     dfs = []
     for (i, metric) in enumerate(metrics)
-        df_best = select_best(df, metric; split, wide=true, rank=true, kwargs...)
+        df_best = select_best(df, metric, [:dataset, :loss]; split)
+        df_best = transform(
+            groupby(df_best, :dataset),
+            :loss,
+            metric => rank_func => metric,
+        )
+        df_best = DataFrames.unstack(df_best, :dataset, :loss, metric)
         dropmissing!(df_best)
+
 
         tmp = DataFrame(Dict(
             :loss => names(df_best)[2:end],
@@ -253,6 +250,77 @@ function rank_table(
     end
     return innerjoin(dfs..., on=:loss)
 end
+
+function measurement_metric(x; digits=2)
+    mn = round(mean(x); digits)
+    st = round(std(x); digits)
+    return measurement(mn, st)
+end
+
+function best_table(
+    df::DataFrame,
+    metric::Symbol;
+    split::Symbol=:test
+)
+
+    df_best = select_best(df, metric, [:dataset, :seed, :loss]; split)
+    df_best = combine(
+        groupby(df_best, [:dataset, :loss]),
+        metric => measurement_metric => metric,
+    )
+    df_best = DataFrames.unstack(df_best, :loss, :dataset, metric)
+    return df_best
+end
+
+function nice_table(
+    df;
+    columns=names(df),
+    align= "l" * repeat("c", length(columns)-1),
+    caption = "",
+    label = "",
+    highlight::Vector{NTuple{2, Int}} = Vector{NTuple{2, Int}}[],
+)
+
+    n = length(columns)
+
+    io = IOBuffer()
+    write(io, "\\begin{table}[!ht] \n")
+    write(io, "\\centering \n")
+    write(io, "\\resizebox{\\columnwidth}{!}{% \n")
+    write(io, "\\begin{NiceTabular}{$(align)} \n")
+    write(io, "\\toprule \n")
+    join(io, latex_string.(columns), " \n  & ")
+    write(io, "\\\\ \n\\midrule \n")
+    for (i, row) in enumerate(eachrow(df))
+        for (j, val) in enumerate(collect(row))
+            if (i, j) in highlight
+                write(io, highlighter(latex_string(val)))
+            else
+                write(io, latex_string(val))
+            end
+            if j != n
+                write(io, "\n  & ")
+            end
+        end
+        write(io, " \\\\ \n")
+    end
+    write(io, "\\bottomrule\n")
+    write(io, "\\end{NiceTabular}\n")
+    write(io, "}\n")
+    if !isempty(caption)
+        write(io, "\\caption{$(caption)}\n")
+    end
+    if !isempty(label)
+        write(io, "\\label{tab: $(label)}\n")
+    end
+    write(io, "\\end{table}")
+    return String(take!(io))
+end
+
+highlighter(val) = "\\Block[fill=green!50]{1-1}{$val}"
+
+latex_string(x) = string(x)
+latex_string(x::Measurement) = string("\$ $(x.val) \\pm $(x.err) \$")
 
 # ------------------------------------------------------------------------------------------
 # Critical diagrams
@@ -415,7 +483,7 @@ end
 plot_dual_gap(d::Dict; kwargs...) = plot_dual_gap!(plot(), d; kwargs...)
 plot_dual_gap!(d::Dict; kwargs...) = plot_dual_gap!(current(), d; kwargs...)
 
-function plot_dual_gap!(plt, d::Dict; normed::Bool = true, inds=:, kwargs...)
+function plot_dual_gap!(plt, d::Dict; normed::Bool=true, inds=:, kwargs...)
     gap = d[:loss_gap]
     if normed
         gap = gap[inds] / gap[1]

@@ -25,6 +25,7 @@ export tpr_at_fpr, tpr_at_k, pos_at_top_k, roc_auc
 export summary_dataset
 export critical_diagram
 export nemenyi_cd, friedman_test_statistic, friedman_critval
+export best_table, nice_table
 
 include("utilities.jl")
 include("latexutils.jl")
