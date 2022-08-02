@@ -29,7 +29,7 @@ for folder in joinpath.("Nsf5", readdir(configs_dir("Nsf5")))
         logdir=log_dir(folder),
         partition="amd",
         cpus_per_task=2,
-        mem="1000G"
+        mem="900G"
     ) |> run
 end
 
