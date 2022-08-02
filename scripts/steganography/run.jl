@@ -11,40 +11,48 @@ using .SLURM
 configs_dir(args...) = projectdir("configs", args...)
 log_dir(args...) = projectdir("logs", args...)
 
-sbatch_array(
-    scriptsdir("run_model.jl"),
-    configs_dir("Nsf5Small");
-    logdir=log_dir("Nsf5Small"),
-    partition="amd",
-    cpus_per_task=2,
-    mem="100G"
-) |> run
+for folder in joinpath.("Nsf5Small", readdir(configs_dir("Nsf5Small")))
+    sbatch_array(
+        scriptsdir("run_model.jl"),
+        configs_dir(folder);
+        logdir=log_dir(folder),
+        partition="amd",
+        cpus_per_task=2,
+        mem="100G"
+    ) |> run
+end
 
-sbatch_array(
-    scriptsdir("run_model.jl"),
-    configs_dir("Nsf5");
-    logdir=log_dir("Nsf5"),
-    partition="amd",
-    cpus_per_task=2,
-    mem="1000G"
-) |> run
+for folder in joinpath.("Nsf5", readdir(configs_dir("Nsf5")))
+    sbatch_array(
+        scriptsdir("run_model.jl"),
+        configs_dir(folder);
+        logdir=log_dir(folder),
+        partition="amd",
+        cpus_per_task=2,
+        mem="1000G"
+    ) |> run
+end
 
-sbatch_array(
-    scriptsdir("run_model.jl"),
-    configs_dir("JMiPODSmall");
-    logdir=log_dir("JMiPODSmall"),
-    partition="amdgpu",
-    gres="gpu:1",
-    cpus_per_task=16,
-    mem="100G"
-) |> run
+for folder in joinpath.("JMiPODSmall", readdir(configs_dir("JMiPODSmall")))
+    sbatch_array(
+        scriptsdir("run_model.jl"),
+        configs_dir(folder);
+        logdir=log_dir(folder),
+        partition="amdgpu",
+        gres="gpu:1",
+        cpus_per_task=16,
+        mem="50G"
+    ) |> run
+end
 
-sbatch_array(
-    scriptsdir("run_model.jl"),
-    configs_dir("JMiPOD");
-    logdir=log_dir("JMiPOD"),
-    partition="amdgpuextralong",
-    gres="gpu:1",
-    cpus_per_task=16,
-    mem = "300G"
-) |> run
+for folder in joinpath.("JMiPOD", readdir(configs_dir("JMiPOD")))
+    sbatch_array(
+        scriptsdir("run_model.jl"),
+        configs_dir(folder);
+        logdir=log_dir(folder),
+        partition="amdgpuextralong",
+        gres="gpu:1",
+        cpus_per_task=16,
+        mem="100G"
+    ) |> run
+end

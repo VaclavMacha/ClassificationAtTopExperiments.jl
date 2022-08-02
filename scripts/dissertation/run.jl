@@ -11,53 +11,36 @@ using .SLURM
 configs_dir(args...) = projectdir("configs", args...)
 log_dir(args...) = projectdir("logs", args...)
 
-sbatch_array(
-    scriptsdir("run_model.jl"),
-    configs_dir("Nsf5Small");
-    logdir=log_dir("Nsf5Small"),
-    partition="amd",
-    cpus_per_task=2,
-    mem="100G"
-) |> run
-
-datasets = (
-    "DeepTopPush_MNIST",
-    "DeepTopPush_FashionMNIST",
-    "DeepTopPush_CIFAR10",
-    "DeepTopPush_CIFAR20",
-    "DeepTopPush_CIFAR100",
-    "DeepTopPush_SVHN2",
-    "DeepTopPush_SVHN2Extra",
-)
-
-for dataset in datasets
+for folder in joinpath.("Primal", readdir(configs_dir("Primal")))
     sbatch_array(
         scriptsdir("run_model.jl"),
-        configs_dir(dataset);
-        logdir=log_dir(dataset),
-        partition="amdgpu",
-        gres="gpu:1",
+        configs_dir(folder);
+        logdir=log_dir(folder),
+        partition="amd",
         cpus_per_task=2,
         mem="100G"
     ) |> run
 end
 
-# duals
-datasets = (
-    "Dual_MNIST",
-    "Dual_FashionMNIST",
-    "Dual_CIFAR10",
-    "Dual_CIFAR20",
-    "Dual_CIFAR100",
-    "Dual_SVHN2",
-)
+for folder in joinpath.("PrimalNN", readdir(configs_dir("PrimalNN")))
+    sbatch_array(
+        scriptsdir("run_model_MPI.jl"),
+        configs_dir(folder);
+        mpi_jobs=4,
+        logdir=log_dir(folder),
+        partition="amdgpufast",
+        gres="gpu:1",
+        cpus_per_task=4,
+        mem="200G"
+    ) |> run
+end
 
-for dataset in datasets
+for folder in joinpath.("Dual", readdir(configs_dir("Dual")))
     sbatch_array(
         scriptsdir("run_model.jl"),
-        configs_dir(dataset);
-        logdir=log_dir(dataset),
-        partition="amd",
+        configs_dir(folder);
+        logdir=log_dir(folder),
+        partition="amdlong",
         cpus_per_task=2,
         mem="100G"
     ) |> run
