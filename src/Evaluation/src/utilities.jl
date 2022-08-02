@@ -13,7 +13,7 @@ end
 _dataframe(path::AbstractString) = _dataframe(TOML.parsefile(path))
 
 function _dataframe(dict::AbstractDict)
-    return if haskey(dict, :optimiser)
+    return if haskey(dict, "optimiser")
         DataFrame([
             _dataframe(parse_config(dict["dataset"]), "dataset")...,
             _dataframe(parse_config(dict["model"]), "model")...,
@@ -49,12 +49,12 @@ end
 
 function tpr_at_fpr(y, s, rate::Real)
     t = threshold_at_fpr(y, s, rate)
-    return true_positive_rate(y, s, t)
+    return true_positive_rate(y, s, nextfloat(t))
 end
 
 function tpr_at_k(y, s, k::Int=1)
     t = partialsort(s[y.==0], k; rev=true)
-    return true_positive_rate(y, s, t)
+    return true_positive_rate(y, s, nextfloat(t))
 end
 
 function roc_auc(y, s)
