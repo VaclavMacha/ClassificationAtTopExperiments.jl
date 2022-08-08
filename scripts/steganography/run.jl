@@ -27,9 +27,9 @@ for folder in joinpath.("Nsf5", readdir(configs_dir("Nsf5")))
         scriptsdir("run_model.jl"),
         configs_dir(folder);
         logdir=log_dir(folder),
-        partition="amd",
+        partition="amdlong",
         cpus_per_task=2,
-        mem="900G"
+        mem="950G"
     ) |> run
 end
 
