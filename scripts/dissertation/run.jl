@@ -11,31 +11,34 @@ using .SLURM
 configs_dir(args...) = projectdir("configs", args...)
 log_dir(args...) = projectdir("logs", args...)
 
-for folder in joinpath.("Primal", readdir(configs_dir("Primal")))
+primal = "dissertation/primal"
+for folder in joinpath.(primal, readdir(configs_dir(primal)))
     sbatch_array(
         scriptsdir("run_model.jl"),
         configs_dir(folder);
         logdir=log_dir(folder),
         partition="amd",
         cpus_per_task=2,
-        mem="100G"
+        mem="50G"
     ) |> run
 end
 
-for folder in joinpath.("PrimalNN", readdir(configs_dir("PrimalNN")))
+primalnn = "dissertation/primalNN"
+for folder in joinpath.(primalnn, readdir(configs_dir(primalnn)))
     sbatch_array(
         scriptsdir("run_model_MPI.jl"),
         configs_dir(folder);
         mpi_jobs=4,
         logdir=log_dir(folder),
-        partition="amdgpufast",
+        partition="amdgpu",
         gres="gpu:1",
         cpus_per_task=4,
         mem="200G"
     ) |> run
 end
 
-for folder in joinpath.("Dual", readdir(configs_dir("Dual")))
+dual = "dissertation/dual"
+for folder in joinpath.(dual, readdir(configs_dir(dual)))
     sbatch_array(
         scriptsdir("run_model.jl"),
         configs_dir(folder);
