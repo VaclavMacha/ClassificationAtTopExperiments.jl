@@ -5,7 +5,7 @@
 
 module load fosscuda
 module load cuDNN/8.0.5.39-CUDA-11.1.1
-module load --ignore-cache Julia
+module load --ignore-cache Julia/1.7.3-linux-x86_64
 
 export OMPI_MCA_mpi_warn_on_fork=0
 export JULIA_CUDA_MEMORY_POOL=none
@@ -35,12 +35,16 @@ else
     """
     sleep(s)
 
+    using Pkg
+    Pkg.add("DrWatson")
+
     using DrWatson
     quickactivate(
         "/home/machava2/projects/ClassificationAtTopExperiments.jl",
         "ClassificationAtTopExperiments.jl",
     )
 
+    Pkg.instantiate()
     using Experiments
 
     function Experiments.datasetsdir(args...)
