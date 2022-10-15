@@ -42,7 +42,7 @@ function extract_scores(solution::Dict, split::Symbol)
 end
 
 function pos_at_top_k(y, s, k::Int=1)
-    t = partialsort(s[y.==0], k; rev=true)
+    t = mean(partialsort(s[y.==0], 1:k; rev=true))
     top = mean(s[y.==1] .> t)
     return top
 end
@@ -53,7 +53,7 @@ function tpr_at_fpr(y, s, rate::Real)
 end
 
 function tpr_at_k(y, s, k::Int=1)
-    t = partialsort(s[y.==0], k; rev=true)
+    t = mean(partialsort(s[y.==0], 1:k; rev=true))
     return true_positive_rate(y, s, nextfloat(t))
 end
 
