@@ -189,9 +189,14 @@ function list_subdirs(dirs::Vector{String})
     end
 end
 
-function _select_best(df, col::Symbol; by=argmax)
+function _select_best(df, col::Symbol, use_default_metric::Bool; by=argmax)
     inds = findall(Symbol.(df.split) .== :valid)
-    ind = by(df[inds, col])
+    if use_default_metric && in(:default_metric, propertynames(df))
+        col_metric = df.default_metric[1]
+        ind = by(df[inds, col_metric])
+    else
+        ind = by(df[inds, col])
+    end
     id = df.id[inds[ind]]
     return df[df.id.==id, :]
 end
@@ -200,15 +205,13 @@ function select_best(
     df_in::DataFrame,
     metric::Symbol,
     group_cols::Vector{Symbol};
-    split::Symbol=:test
+    split::Symbol=:test,
+    use_default_metric::Bool = false,
 )
 
-    df = select(df_in, [:id, :split, group_cols..., metric])
-
-    # select best parameters for loss
     df_best = combine(
-        groupby(df, [group_cols...]),
-        sdf -> _select_best(sdf, metric)
+        groupby(df_in, [group_cols...]),
+        sdf -> _select_best(sdf, metric, use_default_metric)
     )
     df_best = df_best[Symbol.(df_best.split).==split, :]
     select!(df_best, Not([:split, :id]))
@@ -220,11 +223,12 @@ function rank_table(
     df::DataFrame,
     metrics::Vector{Symbol}=Symbol[];
     split::Symbol=:test,
-    rank_func::Function=x -> tiedrank(x; rev=true)
+    rank_func::Function=x -> tiedrank(x; rev=true),
+    use_default_metric::Bool = false,
 )
     dfs = []
     for (i, metric) in enumerate(metrics)
-        df_best = select_best(df, metric, [:dataset, :loss]; split)
+        df_best = select_best(df, metric, [:dataset, :loss]; split, use_default_metric)
         df_best = transform(
             groupby(df_best, :dataset),
             :loss,
@@ -260,10 +264,15 @@ end
 function best_table(
     df::DataFrame,
     metric::Symbol;
-    split::Symbol=:test
+    split::Symbol=:test,
+    use_default_metric::Bool = false,
 )
 
-    df_best = select_best(df, metric, [:dataset, :seed, :loss]; split)
+    df_best = select_best(df, metric, [:dataset, :seed, :loss]; split, use_default_metric)
+    if use_default_metric && in(:default_metric, propertynames(df_best))
+        select!(df_best, Not(:default_metric))
+    end
+
     df_best = combine(
         groupby(df_best, [:dataset, :loss]),
         metric => measurement_metric => metric,

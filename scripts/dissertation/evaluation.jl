@@ -7,22 +7,23 @@ using Evaluation
 # Utilities
 #-------------------------------------------------------------------------------------------
 const LOSS = Dict(
-    "CrossEntropy" => ("\\BaseLine", 1),
-    "SVM" => ("\\SVM", 2),
-    "TopPush" => ("\\TopPush", 3),
-    "DeepTopPush" => ("\\DeepTopPush", 4),
-    "TopPushK-5" => ("\\TopPushK(5)", 5),
-    "TopPushK-10" => ("\\TopPushK(10)", 6),
-    "GrillNP-0.01" => ("\\GrillNP(0.01)", 7),
-    "GrillNP-0.05" => ("\\GrillNP(0.05)", 8),
-    "TauFPL-0.01" => ("\\tauFPL(0.01)", 9),
-    "TauFPL-0.05" => ("\\tauFPL(0.05)", 10),
-    "PatMatNP-0.01" => ("\\PatMatNP(0.01)", 11),
-    "PatMatNP-0.05" => ("\\PatMatNP(0.05)", 12),
+    "CrossEntropy" => ("\\BaseLine", 1, :auc),
+    "SVM" => ("\\SVM", 2, :auc),
+    "TopPush" => ("\\TopPush", 3, :tpr_at_k1),
+    "DeepTopPush" => ("\\DeepTopPush", 4, :tpr_at_k1),
+    "TopPushK-5" => ("\\TopPushK(5)", 5, :tpr_at_k5),
+    "TopPushK-10" => ("\\TopPushK(10)", 6, :tpr_at_k10),
+    "GrillNP-0.01" => ("\\GrillNP(0.01)", 7, :tpr_at_fpr1),
+    "GrillNP-0.05" => ("\\GrillNP(0.05)", 8, :tpr_at_fpr5),
+    "TauFPL-0.01" => ("\\tauFPL(0.01)", 9, :tpr_at_fpr1),
+    "TauFPL-0.05" => ("\\tauFPL(0.05)", 10, :tpr_at_fpr5),
+    "PatMatNP-0.01" => ("\\PatMatNP(0.01)", 11, :tpr_at_fpr1),
+    "PatMatNP-0.05" => ("\\PatMatNP(0.05)", 12, :tpr_at_fpr5),
 )
 
 map_loss(loss) = LOSS[loss][1]
 order_loss(loss) = LOSS[loss][2]
+map_default_metric(loss) = LOSS[loss][3]
 
 metrics = [
     :tpr_at_k1 => (y, s) -> round_perc(tpr_at_k(y, s, 1)),
@@ -110,10 +111,12 @@ include_cols = [
 
 α = 0.05
 y_step = 3.5
+use_default_metric = true
 
 for (name, df) in dfs
     df_joined = join_cols(df; metrics, to_join, include_cols)
-    df_ranks = rank_table(df_joined, first.(metrics))
+    df_joined[:, :default_metric] .= map_default_metric.(df_joined.loss)
+    df_ranks = rank_table(df_joined, first.(metrics); use_default_metric)
 
     path = joinpath(DATADIR, "results", "critical_diagrams_$(name).tex")
     mkpath(dirname(path))
@@ -147,15 +150,20 @@ include_cols = [
     :loss,
 ]
 
+use_default_metric = true
+
 for (name, df) in dfs
     df_joined = join_cols(df; metrics, to_join, include_cols)
+    df_joined[:, :default_metric] .= map_default_metric.(df_joined.loss)
 
     path = joinpath(DATADIR, "results", "mean_metrics_$(name).tex")
+    path_csv = joinpath(DATADIR, "results", "mean_metrics_$(name).csv")
     mkpath(dirname(path))
+    dfs_best = []
 
     open(path, "w") do io
         for metric in first.(metrics)
-            df_best = best_table(df_joined, metric; split=:test)
+            df_best = best_table(df_joined, metric; split=:test, use_default_metric)
             perm = sortperm(order_loss.(df_best.loss))
             df_best.loss = map_loss.(df_best.loss)
 
@@ -174,6 +182,9 @@ for (name, df) in dfs
                 highlight
             ))
             write(io, "\n\n")
+            insertcols!(df_best, 1, :metric => fill(metric, size(df_best, 1)))
+            push!(dfs_best, df_best)
         end
     end
+    CSV.write(path_csv, reduce(vcat, dfs_best))
 end
