@@ -87,6 +87,7 @@ function evaluation(
     insertcols!(df, 1, :id => id, :split => split)
     epoch = epoch < 0 ? df.epoch_max : epoch
     insertcols!(df, findfirst(==(:epoch_max), propertynames(df)), :epoch => epoch)
+    df.file_solution .= file_solution
 
     if isfile(file_solution)
         y, s = extract_scores(load_checkpoint(file_solution), split)
