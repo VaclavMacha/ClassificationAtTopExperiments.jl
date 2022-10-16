@@ -208,6 +208,7 @@ function select_best(
     group_cols::Vector{Symbol};
     split::Symbol=:test,
     use_default_metric::Bool = false,
+    remove_split_id::Bool = true
 )
 
     df_best = combine(
@@ -215,8 +216,24 @@ function select_best(
         sdf -> _select_best(sdf, metric, use_default_metric)
     )
     df_best = df_best[Symbol.(df_best.split).==split, :]
-    select!(df_best, Not([:split, :id]))
+    if remove_split_id
+        select!(df_best, Not([:split, :id]))
+    end
+    return df_best
+end
 
+function select_best(
+    df_in::DataFrame,
+    group_cols::Vector{Symbol};
+    split::Symbol=:test,
+)
+
+    df_best = combine(
+        groupby(df_in, [group_cols...]),
+        sdf -> _select_best(sdf, :nothing, true)
+    )
+    df_best = df_best[Symbol.(df_best.split).==split, :]
+    select!(df_best, [group_cols..., :split, :id])
     return df_best
 end
 
@@ -445,6 +462,24 @@ function plot_roc(
         sol, loss = _load_solution(dir; epoch)
         if !isnothing(loss)
             in(loss, exclude) && continue
+            plot_roc!(plt, sol, key; label=_string(loss), kwargs...)
+        end
+    end
+    return plt
+end
+
+function plot_roc(
+    dirs::Vector{<:AbstractString};
+    key::Symbol=:test,
+    epoch::Int=-1,
+    kwargs...
+)
+
+    plt = plot()
+    for dir in dirs
+        isdir(dir) || continue
+        sol, loss = _load_solution(dir; epoch)
+        if !isnothing(loss)
             plot_roc!(plt, sol, key; label=_string(loss), kwargs...)
         end
     end
