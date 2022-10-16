@@ -132,4 +132,8 @@ include("logging.jl")
 include("configs.jl")
 include("train.jl")
 
+function __init__()
+    get!(ENV, "DATADEPS_LOAD_PATH", "/mnt/personal/machava2/datasets")
+end
+
 end # module

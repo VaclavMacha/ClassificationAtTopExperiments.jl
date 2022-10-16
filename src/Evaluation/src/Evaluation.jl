@@ -30,4 +30,8 @@ export best_table, nice_table
 include("utilities.jl")
 include("latexutils.jl")
 
+function __init__()
+    get!(ENV, "DATADEPS_LOAD_PATH", "/mnt/personal/machava2/datasets")
+end
+
 end # module
