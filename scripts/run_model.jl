@@ -44,7 +44,7 @@ Pkg.instantiate()
 using Experiments
 
 function Experiments.datasetsdir(args...)
-    return joinpath("/mnt/beegfs/gpu/temporary/machava2/datasets", args...)
+    return joinpath("/mnt/personal/machava2/datasets", args...)
 end
 
 load_or_run(path)
