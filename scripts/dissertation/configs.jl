@@ -126,6 +126,23 @@ for dataset in datasets
     generate_configs(dir, (dataset,), (Linear(),), objectives, optimisers, trains)
 end
 
+# Full GD
+trains = (
+    TrainConfig(;
+        seed=seed,
+        epoch_max=100,
+        checkpoint_every=5,
+        device="CPU",
+        save_dir="dissertation/primalFull"
+    )
+    for seed in 1:10
+)
+
+for dataset in datasets
+    dir = string("dissertation/primalFull/", typeof(dataset).name.name)
+    generate_configs(dir, (dataset,), (Linear(),), objectives, optimisers, trains)
+end
+
 #-------------------------------------------------------------------------------------------
 # Primal formulation NN
 #-------------------------------------------------------------------------------------------

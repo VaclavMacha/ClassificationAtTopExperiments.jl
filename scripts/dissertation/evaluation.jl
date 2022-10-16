@@ -60,13 +60,21 @@ const DATASETS = [
 #-------------------------------------------------------------------------------------------
 # Loading DataFrames
 #-------------------------------------------------------------------------------------------
-force = true
+force = false
 file_primal = joinpath(DATADIR, "primal", "metrics.csv")
 if !isfile(file_primal) || force
     df_primal = evaluation(joinpath(DATADIR, "primal"); metrics)
     CSV.write(file_primal, df_primal)
 else
     df_primal = CSV.read(file_primal, DataFrame)
+end
+
+file_primal_full = joinpath(DATADIR, "primalFull", "metrics.csv")
+if !isfile(file_primal_full) || force
+    df_primal_full = evaluation(joinpath(DATADIR, "primalFull"); metrics)
+    CSV.write(file_primal_full, df_primal_full)
+else
+    df_primal_full = CSV.read(file_primal_full, DataFrame)
 end
 
 file_dual = joinpath(DATADIR, "dual", "metrics.csv")
@@ -87,10 +95,10 @@ end
 
 dfs = (
     "primal" => df_primal,
+    "primal_full" => df_primal_full,
     "dual_linear" => df_dual[string.(df_dual.model).=="Linear", :],
     "dual_gauss" => df_dual[string.(df_dual.model).!="Linear", :],
-    "primalnn_adam" => df_primalNN[string.(df_primalNN.optimiser).!="OptADAM", :],
-    "primalnn_desc" => df_primalNN[string.(df_primalNN.optimiser).!="OptDescent", :],
+    "primalnn" => df_primalNN,
 )
 
 #-------------------------------------------------------------------------------------------
@@ -99,7 +107,6 @@ dfs = (
 to_join = [
     :dataset => [:dataset, :seed],
     :loss => [:loss, :τ, :K],
-    :optimiser => [:optimiser, :eta],
 ]
 
 include_cols = [
