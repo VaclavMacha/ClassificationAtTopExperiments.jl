@@ -24,12 +24,12 @@ for folder in joinpath.(primal, readdir(configs_dir(primal)))
 end
 
 primal = "dissertation/primalFull"
-for folder in joinpath.(primal, readdir(configs_dir(primal)))[2:2]
+for folder in joinpath.(primal, readdir(configs_dir(primal)))
     sbatch_array(
         scriptsdir("run_model.jl"),
         configs_dir(folder);
         logdir=log_dir(folder),
-        partition="amd",
+        partition="amdfast",
         cpus_per_task=2,
         mem="50G"
     ) |> run
