@@ -20,6 +20,10 @@ function materialize(D::AbstractVision, ::Linear)
     return Chain(Flux.flatten, Dense(prod(obs_size(D)) => 1; bias=false))
 end
 
+function materialize(::AbstractEmber, ::Linear)
+    return Dense(2381 => 1; bias=false)
+end
+
 materialize_dual(::Linear) = ClassificationAtTopDual.Linear()
 
 # ------------------------------------------------------------------------------------------

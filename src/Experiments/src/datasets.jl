@@ -367,3 +367,41 @@ function load_dataset(::SVHN2Extra, key::Symbol)
         MLDatasets.SVHN2(Float32, :test)
     end
 end
+
+# ------------------------------------------------------------------------------------------
+# Ember
+# ------------------------------------------------------------------------------------------
+abstract type AbstractEmber <: DatasetType end
+
+obs_size(::AbstractEmber) = (2381,)
+
+@kwdef struct Ember <: AbstractEmber
+    pos_labels::Vector{Int} = [1]
+    at_train::Float64 = 0.75
+end
+
+parse_type(::Val{:Ember}) = Ember
+emberdir(args...) = datasetsdir("Ember", args...)
+
+function load(d::AbstractEmber, reshape_func=flux_shape)
+    train = h5open(emberdir("train.h5"), "r") do fid
+        return (features = read(fid, "features"), targets = read(fid, "labels"))
+    end
+    itrain, ivalid = splitobs(1:numobs(train); at=d.at_train, shuffle=true)
+    test = h5open(emberdir("test.h5"), "r") do fid
+        return (features = read(fid, "features"), targets = read(fid, "labels"))
+    end
+
+    pos = d.pos_labels
+
+    x_train = obsview(train.features, itrain)
+    y_train = obsview(train.targets, itrain)
+    x_valid = obsview(train.features, ivalid)
+    y_valid = obsview(train.targets, ivalid)
+
+    return (
+        ArrayDataset(reshape_func(x_train), reshape_func(binarize(y_train, pos))),
+        ArrayDataset(reshape_func(x_valid), reshape_func(binarize(y_valid, pos))),
+        ArrayDataset(reshape_func(test.features), reshape_func(binarize(test.targets, pos))),
+    )
+end
