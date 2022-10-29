@@ -13,7 +13,7 @@ function generate_configs(
     objectives,
     optimisers,
     trains;
-    limit::Int=1500
+    limit::Int=1000
 )
 
     i = 0
@@ -32,7 +32,7 @@ function generate_configs(
     end
 end
 
-function generate_configs(dir_name, datasets, models, objectives, trains; limit=1500)
+function generate_configs(dir_name, datasets, models, objectives, trains; limit=1000)
     i = 0
     j = 1
     for train in trains
@@ -49,7 +49,7 @@ function generate_configs(dir_name, datasets, models, objectives, trains; limit=
     end
 end
 
-function select_not_solved(maindir, dirname="to_solve"; limit=1500)
+function select_not_solved(maindir, dirname="to_solve"; limit=1000)
     i = 0
     j = 1
     for dir in readdir(maindir; join=true)
@@ -75,7 +75,7 @@ end
 # Primal formulation
 #-------------------------------------------------------------------------------------------
 # formulations
-λs = [1, 1e-1, 1e-2, 1e-3, 1e-4, 1e-5]
+λs = [0, 1, 1e-1, 1e-2, 1e-3, 1e-4, 1e-5]
 ϑs = [1, 1e-1, 1e-2, 1e-3, 1e-4, 1e-5]
 
 objectives = (
@@ -93,19 +93,21 @@ objectives = (
 
 # optimisers
 optimisers = (
+    OptDescent(eta=1e-2),
     OptADAM(eta=1e-2),
 )
 
 # SGD
 datasets = (
-    MNIST(),
-    FashionMNIST(),
-    CIFAR10(),
-    CIFAR20(),
-    CIFAR100(),
-    SVHN2(),
-    SVHN2Extra(),
-    Nsf5Small(),
+    # MNIST(),
+    # FashionMNIST(),
+    # CIFAR10(),
+    # CIFAR20(),
+    # CIFAR100(),
+    # SVHN2(),
+    # SVHN2Extra(),
+    # Nsf5Small(),
+    Ember(),
 )
 
 trains = (
@@ -164,7 +166,7 @@ objectives = (
 )
 
 optimisers = (
-    OptDescent(eta=1e-2),
+    # OptDescent(eta=1e-2),
     OptADAM(eta=1e-2),
 )
 
@@ -175,7 +177,7 @@ datasets = (
     CIFAR20(),
     CIFAR100(),
     SVHN2(),
-    SVHN2Extra(),
+    # SVHN2Extra(),
 )
 
 trains = (
@@ -183,8 +185,8 @@ trains = (
         seed=seed,
         epoch_max=100,
         checkpoint_every=5,
-        batch_neg=256,
-        batch_pos=256,
+        batch_neg=32,
+        batch_pos=32,
         device="GPU",
         save_dir="dissertation/primalNN"
     )
@@ -192,7 +194,7 @@ trains = (
 )
 
 for dataset in datasets
-    dir = string("dissertation/PrimalNN/", typeof(dataset).name.name)
+    dir = string("dissertation/primalNN/", typeof(dataset).name.name)
     generate_configs(dir, (dataset,), (SimpleConv(),), objectives, optimisers, trains)
 end
 
