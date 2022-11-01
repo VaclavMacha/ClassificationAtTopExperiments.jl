@@ -74,13 +74,28 @@ end
 #-------------------------------------------------------------------------------------------
 # Primal formulation
 #-------------------------------------------------------------------------------------------
-# formulations
-λs = [0, 1, 1e-1, 1e-2, 1e-3, 1e-4, 1e-5]
+λs = [0, 1e-1, 1e-2, 1e-3, 1e-4, 1e-5]
 ϑs = [1, 1e-1, 1e-2, 1e-3, 1e-4, 1e-5]
+
+optimisers = (
+    OptADAM(eta=1e-2),
+)
+
+datasets = (
+    MNIST(),
+    FashionMNIST(),
+    CIFAR10(),
+    CIFAR20(),
+    CIFAR100(),
+    SVHN2(),
+    SVHN2Extra(),
+    Nsf5Small(),
+)
 
 objectives = (
     (CrossEntropy(; λ) for λ in λs)...,
     (TopPush(; λ, surrogate="Hinge") for λ in λs)...,
+    (DeepTopPush(; λ, surrogate="Hinge") for λ in λs)...,
     (TopPushK(; λ, K=5, surrogate="Hinge") for λ in λs)...,
     (TopPushK(; λ, K=10, surrogate="Hinge") for λ in λs)...,
     (PatMatNP(; λ=0.001, τ=0.01, ϑ, surrogate="Hinge") for ϑ in ϑs)...,
@@ -91,25 +106,7 @@ objectives = (
     (GrillNP(; λ, τ=0.05, surrogate="Hinge") for λ in λs)...,
 )
 
-# optimisers
-optimisers = (
-    OptDescent(eta=1e-2),
-    OptADAM(eta=1e-2),
-)
-
-# SGD
-datasets = (
-    # MNIST(),
-    # FashionMNIST(),
-    # CIFAR10(),
-    # CIFAR20(),
-    # CIFAR100(),
-    # SVHN2(),
-    # SVHN2Extra(),
-    # Nsf5Small(),
-    Ember(),
-)
-
+# Linear model
 trains = (
     TrainConfig(;
         seed=seed,
@@ -128,65 +125,14 @@ for dataset in datasets
     generate_configs(dir, (dataset,), (Linear(),), objectives, optimisers, trains)
 end
 
-# Full GD
+# Neural Networks
 trains = (
     TrainConfig(;
         seed=seed,
         epoch_max=100,
         checkpoint_every=5,
-        device="CPU",
-        save_dir="dissertation/primalFull"
-    )
-    for seed in 1:10
-)
-
-for dataset in datasets
-    dir = string("dissertation/primalFull/", typeof(dataset).name.name)
-    generate_configs(dir, (dataset,), (Linear(),), objectives, optimisers, trains)
-end
-
-#-------------------------------------------------------------------------------------------
-# Primal formulation NN
-#-------------------------------------------------------------------------------------------
-λs = [1, 1e-1, 1e-2, 1e-3, 1e-4, 1e-5]
-ϑs = [1, 1e-1, 1e-2, 1e-3, 1e-4, 1e-5]
-
-objectives = (
-    (CrossEntropy(; λ) for λ in λs)...,
-    (TopPush(; λ, surrogate="Hinge") for λ in λs)...,
-    (DeepTopPush(; λ, surrogate="Hinge") for λ in λs)...,
-    (TopPushK(; λ, K=5, surrogate="Hinge") for λ in λs)...,
-    (TopPushK(; λ, K=10, surrogate="Hinge") for λ in λs)...,
-    (PatMatNP(; λ=0.001, τ=0.01, ϑ, surrogate="Hinge") for ϑ in ϑs)...,
-    (PatMatNP(; λ=0.001, τ=0.05, ϑ, surrogate="Hinge") for ϑ in ϑs)...,
-    (TauFPL(; λ, τ=0.01, surrogate="Hinge") for λ in λs)...,
-    (TauFPL(; λ, τ=0.05, surrogate="Hinge") for λ in λs)...,
-    (GrillNP(; λ, τ=0.01, surrogate="Hinge") for λ in λs)...,
-    (GrillNP(; λ, τ=0.05, surrogate="Hinge") for λ in λs)...,
-)
-
-optimisers = (
-    # OptDescent(eta=1e-2),
-    OptADAM(eta=1e-2),
-)
-
-datasets = (
-    MNIST(),
-    FashionMNIST(),
-    CIFAR10(),
-    CIFAR20(),
-    CIFAR100(),
-    SVHN2(),
-    # SVHN2Extra(),
-)
-
-trains = (
-    TrainConfig(;
-        seed=seed,
-        epoch_max=100,
-        checkpoint_every=5,
-        batch_neg=32,
-        batch_pos=32,
+        batch_neg=256,
+        batch_pos=256,
         device="GPU",
         save_dir="dissertation/primalNN"
     )
@@ -201,10 +147,6 @@ end
 #-------------------------------------------------------------------------------------------
 # Dual formulation
 #-------------------------------------------------------------------------------------------
-# formulations
-λs = [1, 1e-1, 1e-2, 1e-3, 1e-4, 1e-5]
-ϑs = [1, 1e-1, 1e-2, 1e-3, 1e-4, 1e-5]
-
 objectives = (
     (SVM(; λ) for λ in λs)...,
     (TopPush(; λ, surrogate="Hinge") for λ in λs)...,
@@ -216,11 +158,6 @@ objectives = (
     (TauFPL(; λ, τ=0.05, surrogate="Hinge") for λ in λs)...,
 )
 
-models = (
-    Linear(),
-    Gaussian(),
-)
-
 datasets = (
     MNIST(),
     FashionMNIST(),
@@ -228,6 +165,11 @@ datasets = (
     CIFAR20(),
     CIFAR100(),
     SVHN2(),
+)
+
+models = (
+    Linear(),
+    Gaussian(),
 )
 
 trains = (
