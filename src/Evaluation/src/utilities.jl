@@ -274,9 +274,7 @@ function rank_table(
 end
 
 function measurement_metric(x; digits=2)
-    mn = round(mean(x); digits)
-    st = round(std(x); digits)
-    return measurement(mn, st)
+    return round(median(x); digits)
 end
 
 function best_table(
