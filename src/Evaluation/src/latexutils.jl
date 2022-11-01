@@ -13,22 +13,25 @@ function critical_diagram(
     v_pad_cv::Real=0.2,
     ymin::Real=0,
     full_range::Bool=true,
-    digits::Int=2
+    digits::Int=2,
+    tikz_only::Bool = false,
 )
 
     io = IOBuffer()
-    write(
-        io,
-        """
-        \\documentclass{standalone}
-        \\usepackage{tikz}
-        \\tikzstyle{line_node} = [line width=1pt, rounded corners, color=black, ->]
-        \\tikzstyle{line_cv} = [line width=3pt, color=gray, line cap=round]
+    if !tikz_only
+        write(
+            io,
+            """
+            \\documentclass{standalone}
+            \\usepackage{tikz}
+            \\tikzstyle{line_node} = [line width=1pt, rounded corners, color=black, ->]
+            \\tikzstyle{line_cv} = [line width=3pt, color=gray, line cap=round]
 
-        \\begin{document}
-        \\begin{tikzpicture}
-        """
-    )
+            \\begin{document}
+            \\begin{tikzpicture}
+            """
+        )
+    end
 
     # axis
     xmin = full_range ? 1 : floor(Int, minimum(ranks))
@@ -100,12 +103,14 @@ function critical_diagram(
     end
 
     # added end of document
-    write(
-        io,
-        """
-        \\end{tikzpicture}
-        \\end{document}
-        """
-    )
+    if !tikz_only
+        write(
+            io,
+            """
+            \\end{tikzpicture}
+            \\end{document}
+            """
+        )
+    end
     return String(take!(io))
 end
