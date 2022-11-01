@@ -303,7 +303,8 @@ function nice_table(
     align= "l" * repeat("c", length(columns)-1),
     caption = "",
     label = "",
-    highlight::Vector{NTuple{2, Int}} = Vector{NTuple{2, Int}}[],
+    highlight_best::Vector{NTuple{2, Int}} = Vector{NTuple{2, Int}}[],
+    highlight_worst::Vector{NTuple{2, Int}} = Vector{NTuple{2, Int}}[],
 )
 
     n = length(columns)
@@ -318,8 +319,10 @@ function nice_table(
     write(io, "\\\\ \n\\midrule \n")
     for (i, row) in enumerate(eachrow(df))
         for (j, val) in enumerate(collect(row))
-            if (i, j) in highlight
-                write(io, highlighter(latex_string(val)))
+            if (i, j) in highlight_best
+                write(io, highlighter_best(latex_string(val)))
+            elseif (i, j) in highlight_worst
+                write(io, highlighter_worst(latex_string(val)))
             else
                 write(io, latex_string(val))
             end
@@ -342,7 +345,8 @@ function nice_table(
     return String(take!(io))
 end
 
-highlighter(val) = "\\Block[fill=green!50]{1-1}{$val}"
+highlighter_best(val) = "\\Block[fill=green!50]{1-1}{$val}"
+highlighter_worst(val) = "\\Block[fill=red!50]{1-1}{$val}"
 
 latex_string(x) = string(x)
 latex_string(x::Measurement) = string("\$ $(x.val) \\pm $(x.err) \$")
