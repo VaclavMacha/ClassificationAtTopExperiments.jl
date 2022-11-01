@@ -44,6 +44,7 @@ const METRIC = Dict(
 )
 
 const DATADIR = "/home/machava2/projects/ClassificationAtTopExperiments.jl/data/dissertation/"
+const RESULTSDIR = "/home/machava2/projects/ClassificationAtTopExperiments.jl/data/results"
 
 const DATASETS = [
     "MNIST",
@@ -69,14 +70,6 @@ else
     df_primal = CSV.read(file_primal, DataFrame)
 end
 
-file_primal_full = joinpath(DATADIR, "primalFull", "metrics.csv")
-if !isfile(file_primal_full) || force
-    df_primal_full = evaluation(joinpath(DATADIR, "primalFull"); metrics)
-    CSV.write(file_primal_full, df_primal_full)
-else
-    df_primal_full = CSV.read(file_primal_full, DataFrame)
-end
-
 file_dual = joinpath(DATADIR, "dual", "metrics.csv")
 if !isfile(file_dual) || force
     df_dual = evaluation(joinpath(DATADIR, "dual"); metrics)
@@ -93,12 +86,30 @@ else
     df_primalNN = CSV.read(file_primalNN, DataFrame)
 end
 
+λs = [0, 1e-1, 1e-2, 1e-3, 1e-4, 1e-5]
+ϑs = [1, 1e-1, 1e-2, 1e-3, 1e-4, 1e-5]
+
+function isvalidrow_primal(row)
+    return all([
+        row.optimiser == "OptADAM",
+        ismissing(row.λ) || in(row.λ, λs),
+        ismissing(row.ϑ) || in(row.ϑ, ϑs),
+        row.batch_neg == row.batch_pos == 256,
+    ])
+end
+
+function isvalidrow_dual(row)
+    return all([
+        row.model == "Gaussian",
+        ismissing(row.λ) || in(row.λ, λs),
+        ismissing(row.ϑ) || in(row.ϑ, ϑs),
+    ])
+end
+
 dfs = (
-    "primal" => df_primal,
-    "primal_full" => df_primal_full,
-    "dual_linear" => df_dual[string.(df_dual.model).=="Linear", :],
-    "dual_gauss" => df_dual[string.(df_dual.model).!="Linear", :],
-    "primalnn" => df_primalNN,
+    "primal" => filter(isvalidrow_primal, df_primal),
+    "dual" => filter(isvalidrow_dual, df_dual),
+    "primalnn" => filter(isvalidrow_primal, df_primalNN),
 )
 
 #-------------------------------------------------------------------------------------------
@@ -118,6 +129,7 @@ include_cols = [
 
 α = 0.05
 y_step = 3.5
+tikz_only = true
 use_default_metric = true
 
 for (name, df) in dfs
@@ -125,19 +137,23 @@ for (name, df) in dfs
     df_joined[:, :default_metric] .= map_default_metric.(df_joined.loss)
     df_ranks = rank_table(df_joined, first.(metrics); use_default_metric)
 
-    path = joinpath(DATADIR, "results", "critical_diagrams_$(name).tex")
+    path = joinpath(RESULTSDIR, "critical_diagrams_$(name).tex")
     mkpath(dirname(path))
 
     open(path, "w") do io
         ymin = 0
+        write(io, "\\begin{tikzpicture}")
         for metric in reverse(first.(metrics))
             loss = map_loss.(df_ranks.loss)
             ranks = df_ranks[:, metric]
             cv = nemenyi_cd(length(loss), df_ranks.n_datasets[1]; α)
 
-            write(io, critical_diagram(loss, ranks, cv; ymin, title="$(METRIC[metric])"))
+            title = "$(METRIC[metric])"
+            write(io, critical_diagram(loss, ranks, cv; ymin, tikz_only, title))
             ymin += y_step
+            write(io, "\n\n")
         end
+        write(io, "\\end{tikzpicture}")
     end
 end
 
@@ -163,8 +179,8 @@ for (name, df) in dfs
     df_joined = join_cols(df; metrics, to_join, include_cols)
     df_joined[:, :default_metric] .= map_default_metric.(df_joined.loss)
 
-    path = joinpath(DATADIR, "results", "mean_metrics_$(name).tex")
-    path_csv = joinpath(DATADIR, "results", "mean_metrics_$(name).csv")
+    path = joinpath(RESULTSDIR, "mean_metrics_$(name).tex")
+    path_csv = joinpath(RESULTSDIR, "mean_metrics_$(name).csv")
     mkpath(dirname(path))
     dfs_best = []
 
@@ -177,16 +193,28 @@ for (name, df) in dfs
             cols = ["loss", intersect(DATASETS, names(df_best)[2:end])...,]
             df_best = df_best[perm, cols]
 
-            highlight = Vector{NTuple{2,Int}}(undef, size(df_best, 2) - 1)
+            highlight_best = []
             for j in 2:size(df_best, 2)
-                highlight[j-1] = (argmax(skipmissing(df_best[:, j])), j)
+                valmax = maximum(skipmissing(df_best[:, j]))
+                for i in findall(==(valmax), skipmissing(df_best[:, j]))
+                    push!(highlight_best, (i, j))
+                end
+            end
+
+            highlight_worst = []
+            for j in 2:size(df_best, 2)
+                valmax = minimum(skipmissing(df_best[:, j]))
+                for i in findall(==(valmax), skipmissing(df_best[:, j]))
+                    push!(highlight_worst, (i, j))
+                end
             end
 
             write(io, nice_table(
                 df_best;
                 caption="$(METRIC[metric])",
                 label="$name $(metric)",
-                highlight
+                highlight_best = [highlight_best...,],
+                highlight_worst = [highlight_worst...,],
             ))
             write(io, "\n\n")
             insertcols!(df_best, 1, :metric => fill(metric, size(df_best, 1)))
