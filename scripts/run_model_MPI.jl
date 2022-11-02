@@ -19,8 +19,10 @@ exit
 # parse args
 id_slurm = parse(Int, ENV["SLURM_ARRAY_TASK_ID"])
 id_mpi = parse(Int, ENV["OMPI_COMM_WORLD_RANK"])
-id = 4 * (id_slurm - 1) + (id_mpi + 1)
-path = readdir(ARGS[1]; join=true, sort=true)[id]
+
+paths = readdir(ARGS[1]; join=true, sort=true)
+id = min(length(paths), 4 * (id_slurm - 1) + (id_mpi + 1))
+path = paths[id]
 
 if !isfile(path)
     @warn "config file does not exists: $path"
