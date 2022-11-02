@@ -76,7 +76,11 @@ function materialize_dual(o::AbstractPatMat, n_pos::Int)
     τ = Float32(o.τ)
     λ = Float32(o.λ)
     ϑ = Float32(o.ϑ)
-    C = 1 / (λ * n_pos)
+    if λ == 0
+        C = Float32(1)
+    else
+        C = 1 / (λ * n_pos)
+    end
 
     S = if o.surrogate == "Hinge"
         ClassificationAtTopDual.Hinge
@@ -144,7 +148,11 @@ end
 
 function materialize_dual(o::AbstractTopPush, n_pos::Int)
     λ = Float32(o.λ)
-    C = 1 / (λ * n_pos)
+    if λ == 0
+        C = Float32(1)
+    else
+        C = 1 / (λ * n_pos)
+    end
 
     S = if o.surrogate == "Hinge"
         ClassificationAtTopDual.Hinge
@@ -258,6 +266,10 @@ parse_type(::Val{:SVM}) = SVM
 
 function materialize_dual(o::SVM, n_pos::Int)
     λ = Float32(o.λ)
-    C = 1 / (λ * n_pos)
+    if λ == 0
+        C = Float32(1)
+    else
+        C = 1 / (λ * n_pos)
+    end
     return ClassificationAtTopDual.SVM(; C)
 end
