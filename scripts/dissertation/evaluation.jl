@@ -92,6 +92,19 @@ end
 function isvalidrow_primal(row)
     return all([
         String(row.optimiser) == "OptADAM",
+                String(row.loss) != "GrillNP",
+        String(row.loss) != "DeepTopPush",
+        ismissing(row.λ) || in(row.λ, λs),
+        ismissing(row.ϑ) || in(row.ϑ, ϑs),
+        row.batch_neg == row.batch_pos == 256,
+    ])
+end
+
+function isvalidrow_primalnn(row)
+    return all([
+        String(row.optimiser) == "OptADAM",
+        String(row.loss) != "GrillNP",
+        String(row.loss) != "TopPush",
         ismissing(row.λ) || in(row.λ, λs),
         ismissing(row.ϑ) || in(row.ϑ, ϑs),
         row.batch_neg == row.batch_pos == 256,
@@ -109,7 +122,7 @@ end
 dfs = (
     "primal" => filter(isvalidrow_primal, df_primal),
     "dual" => filter(isvalidrow_dual, df_dual),
-    "primalnn" => filter(isvalidrow_primal, df_primalNN),
+    "primalnn" => filter(isvalidrow_primalnn, df_primalNN),
 )
 
 #-------------------------------------------------------------------------------------------
@@ -153,6 +166,7 @@ for (name, df) in dfs
             ymin += y_step
             write(io, "\n\n")
         end
+        write(io, "\\node at (4.5, $(ymin)) {\\textbf{$name}}; \n")
         write(io, "\\end{tikzpicture}")
     end
 end
@@ -185,7 +199,7 @@ for (name, df) in dfs
     dfs_best = []
 
     open(path, "w") do io
-        for metric in first.(metrics)
+        for metric in first.(metrics)[[3, 5, 6]]
             df_best = best_table(df_joined, metric; split=:test, use_default_metric)
             perm = sortperm(order_loss.(df_best.loss))
             df_best.loss = map_loss.(df_best.loss)

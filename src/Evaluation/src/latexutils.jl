@@ -44,9 +44,9 @@ function critical_diagram(
     # title
     if !isempty(title)
         x = round((xmin + xmax) / 2; digits=2)
-        y = round(ymin + (n_left + 1) * v_pad; digits)
+        y = round(ymin + (n_left + 2) * v_pad; digits)
         write(io, left_pad(l_pad))
-        write(io, "\\node at ($x,$y) {$title}; \n")
+        write(io, "\\node at ($x,$y) {\\textbf{\\underline{$title}}}; \n")
     end
 
     # x-axis
