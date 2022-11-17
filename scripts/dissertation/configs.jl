@@ -168,7 +168,6 @@ datasets = (
 )
 
 models = (
-    Linear(),
     Gaussian(),
 )
 
