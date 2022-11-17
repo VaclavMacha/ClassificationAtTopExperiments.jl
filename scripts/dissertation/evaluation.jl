@@ -91,7 +91,7 @@ end
 
 function isvalidrow_primal(row)
     return all([
-        row.optimiser == "OptADAM",
+        String(row.optimiser) == "OptADAM",
         ismissing(row.λ) || in(row.λ, λs),
         ismissing(row.ϑ) || in(row.ϑ, ϑs),
         row.batch_neg == row.batch_pos == 256,
@@ -100,7 +100,7 @@ end
 
 function isvalidrow_dual(row)
     return all([
-        row.model == "Gaussian",
+        String(row.model) == "Gaussian",
         ismissing(row.λ) || in(row.λ, λs),
         ismissing(row.ϑ) || in(row.ϑ, ϑs),
     ])
