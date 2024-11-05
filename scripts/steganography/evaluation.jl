@@ -9,24 +9,82 @@ using Evaluation: plot_roc, get_roc
 #-------------------------------------------------------------------------------------------
 # Utilities
 #-------------------------------------------------------------------------------------------
-const LOSS = Dict(
-    "CrossEntropy-0.5" => ("CrossEntropy(0.5)", 1, :auc),
-    "CrossEntropy-0.9" => ("CrossEntropy(0.9)", 2, :auc),
-    "CrossEntropy-0.99" => ("CrossEntropy(0.99)", 3, :auc),
-    "CrossEntropy-0.999" => ("CrossEntropy(0.999)", 4, :auc),
-    "CrossEntropy-0.1" => ("CrossEntropy(0.1)", 5, :auc),
-    "CrossEntropy-0.01" => ("CrossEntropy(0.01)", 6, :auc),
-    "CrossEntropy-0.001" => ("CrossEntropy(0.001)", 7, :auc),
-    "TopPush" => ("TopPush", 8, :tpr_at_k1),
-    "DeepTopPush" => ("DeepTopPush", 9, :tpr_at_k1),
-    "PatMatNP-1.0e-5" => ("PatMatNP(\$10^{-5}\$)", 10, :tpr_at_fpr00001),
-    "PatMatNP-0.0001" => ("PatMatNP(\$10^{-4}\$)", 11, :tpr_at_fpr0001),
-    "PatMatNP-0.001" => ("PatMatNP(\$10^{-3}\$)", 12, :tpr_at_fpr001),
+const LOSS_MAP = Dict(
+    "CrossEntropy-0.5" => Dict(
+        "name" => "CrossEntropy(0.5)",
+        "latex_name" => "CrossEntropy(0.5)",
+        "order" => 1,
+        "default_metric" => :auc,
+    ),
+    "CrossEntropy-0.9" => Dict(
+        "name" => "CrossEntropy(0.9)",
+        "latex_name" => "CrossEntropy(0.9)",
+        "order" => 2,
+        "default_metric" => :auc,
+    ),
+    "CrossEntropy-0.99" => Dict(
+        "name" => "CrossEntropy(0.99)",
+        "latex_name" => "CrossEntropy(0.99)",
+        "order" => 3,
+        "default_metric" => :auc,
+    ),
+    "CrossEntropy-0.999" => Dict(
+        "name" => "CrossEntropy(0.999)",
+        "latex_name" => "CrossEntropy(0.999)",
+        "order" => 4,
+        "default_metric" => :auc,
+    ),
+    "CrossEntropy-0.1" => Dict(
+        "name" => "CrossEntropy(0.1)",
+        "latex_name" => "CrossEntropy(0.1)",
+        "order" => 5,
+        "default_metric" => :auc,
+    ),
+    "CrossEntropy-0.01" => Dict(
+        "name" => "CrossEntropy(0.01)",
+        "latex_name" => "CrossEntropy(0.01)",
+        "order" => 6,
+        "default_metric" => :auc,
+    ),
+    "CrossEntropy-0.001" => Dict(
+        "name" => "CrossEntropy(0.001)",
+        "latex_name" => "CrossEntropy(0.001)",
+        "order" => 7,
+        "default_metric" => :auc,
+    ),
+    "TopPush" => Dict(
+        "name" => "TopPush",
+        "latex_name" => "TopPush",
+        "order" => 8,
+        "default_metric" => :tpr_at_k1,
+    ),
+    "DeepTopPush" => Dict(
+        "name" => "DeepTopPush",
+        "latex_name" => "DeepTopPush",
+        "order" => 9,
+        "default_metric" => :tpr_at_k1,
+    ),
+    "PatMatNP-1.0e-5" => Dict(
+        "name" => "PatMat-NP(1e-5)",
+        "latex_name" => "PatMatNP(\$10^{-5}\$)",
+        "order" => 10,
+        "default_metric" => :tpr_at_fpr00001,
+    ),
+    "PatMatNP-0.0001" => Dict(
+        "name" => "PatMat-NP(1e-4)",
+        "latex_name" => "PatMatNP(\$10^{-4}\$)",
+        "order" => 11,
+        "default_metric" => :tpr_at_fpr0001,
+    ),
+    "PatMatNP-0.001" => Dict(
+        "name" => "PatMat-NP(1e-3)",
+        "latex_name" => "PatMatNP(\$10^{-3}\$)",
+        "order" => 12,
+        "default_metric" => :tpr_at_fpr001,
+    ),
 )
 
-map_loss(loss) = LOSS[loss][1]
-order_loss(loss) = LOSS[loss][2]
-map_default_metric(loss) = LOSS[loss][3]
+loss_map(loss::AbstractString, key::AbstractString) = LOSS_MAP[loss][key]
 
 metrics = [
     :auc => (y, s) -> round_perc(roc_auc(y, s)),
@@ -50,64 +108,56 @@ const METRIC = Dict(
 
 const DATADIR = "/home/machava2/projects/ClassificationAtTopExperiments.jl/data/steganography"
 
-const DATASETS = [
-    "Nsf5Small-1.0",
-    "Nsf5Small-0.5",
-    "Nsf5Small-0.1",
-    "Nsf5-1.0",
-    "Nsf5-0.5",
-    "Nsf5-0.1",
-    "JMiPODSmall-1.0",
-    "JMiPODSmall-0.5",
-    "JMiPODSmall-0.1",
-    "JMiPOD-1.0",
-    "JMiPOD-0.5",
-    "JMiPOD-0.1",
-]
-
 #-------------------------------------------------------------------------------------------
 # Loading DataFrames
 #-------------------------------------------------------------------------------------------
+results_subdir = "results_tifs_2024-11-04"
 force = false
-file = joinpath(DATADIR, "metrics.csv")
+if !isdir(joinpath(DATADIR, results_subdir))
+    mkdir(joinpath(DATADIR, results_subdir))
+end
+
+file = joinpath(DATADIR, results_subdir, "metrics.csv")
 if !isfile(file) || force
     df = evaluation(DATADIR; metrics)
+    df[:, "batch_size"] = df[:, "batch_pos"] + df[:, "batch_neg"]
+
     CSV.write(file, df)
 else
     df = CSV.read(file, DataFrame)
 end
 
-
-function isvalidrow_jmipod(row)
+function isvalidrow(
+    row,
+    dataset::String;
+    ratios::Vector{<:Real}=Float64[],
+    batch_sizes::Vector{<:Real}=Float64[]
+)
     return all([
-        String(row.dataset) == "JMiPODSmall",
-        row.ratio == 1,
-        !(String(row.loss) == "CrossEntropy" && row.ϵ == 0.9),
-        !(String(row.loss) == "CrossEntropy" && row.ϵ == 0.99),
-        !(String(row.loss) == "CrossEntropy" && row.ϵ == 0.999),
-        !(String(row.loss) == "CrossEntropy" && row.ϵ == 0.1),
-        !(String(row.loss) == "CrossEntropy" && row.ϵ == 0.01),
-        !(String(row.loss) == "CrossEntropy" && row.ϵ == 0.001),
+        String(row.dataset) == dataset,
+        isempty(ratios) || in(row.ratio, ratios),
+        isempty(batch_sizes) || in(row.batch_size, batch_sizes),
+        !(String(row.loss) == "CrossEntropy" && in(row.ϵ, [0.1, 0.01, 0.001])),
     ])
 end
 
-function isvalidrow_nsf5(row)
-    return all([
-        String(row.dataset) == "Nsf5Small",
-        row.ratio == 1,
-        !(String(row.loss) == "CrossEntropy" && row.ϵ == 0.9),
-        !(String(row.loss) == "CrossEntropy" && row.ϵ == 0.99),
-        !(String(row.loss) == "CrossEntropy" && row.ϵ == 0.999),
-        !(String(row.loss) == "CrossEntropy" && row.ϵ == 0.1),
-        !(String(row.loss) == "CrossEntropy" && row.ϵ == 0.01),
-        !(String(row.loss) == "CrossEntropy" && row.ϵ == 0.001),
-    ])
+function alias(row)
+    dataset = replace(string(row.dataset), "JMiPOD" => "J-MiPOD")
+    payload = lpad(Int(100 * row.payload), 3, "0")
+    ratio = lpad(Int(100 * row.ratio), 3, "0")
+    batch_size = row.batch_size
+    return "$(dataset)_payload=$(payload)_ratio=$(ratio)_batchsize=$(batch_size)"
 end
 
-data_frames = [
-    ("JMiPOD", filter(isvalidrow_jmipod, df)),
-    ("NSF5", filter(isvalidrow_nsf5, df)),
-]
+ratios = [0.1, 0.5, 1]
+batch_sizes = [32, 64, 256]
+final_df = vcat(
+    filter(row -> isvalidrow(row, "JMiPODSmall"; ratios, batch_sizes=[32, 64, 256]), df),
+    filter(row -> isvalidrow(row, "Nsf5Small"; ratios, batch_sizes=[0, 32]), df),
+)
+final_df[:, "dataset_alias"] = alias.(eachrow(final_df))
+
+
 # #-------------------------------------------------------------------------------------------
 # # critical diagrams
 # #-------------------------------------------------------------------------------------------
@@ -131,13 +181,13 @@ data_frames = [
 # df_joined = join_cols(df; metrics, to_join, include_cols)
 # df_ranks = rank_table(df_joined, first.(metrics))
 
-# path = joinpath(DATADIR, "results", "critical_diagrams.tex")
+# path = joinpath(DATADIR, results_subdir, "critical_diagrams.tex")
 # mkpath(dirname(path))
 
 # open(path, "w") do io
 #     ymin = 0
 #     for metric in reverse(first.(metrics))
-#         loss = map_loss.(df_ranks.loss)
+#         loss = loss_map.(df_ranks.loss, "latex_name")
 #         ranks = df_ranks[:, metric]
 #         cv = nemenyi_cd(length(loss), df_ranks.n_datasets[1]; α)
 
@@ -150,120 +200,92 @@ data_frames = [
 # mean metrics
 #-------------------------------------------------------------------------------------------
 to_join = [
-    :dataset => [:dataset, :ratio],
     :loss => [:loss, :τ, :K, :ϵ],
     :optimiser => [:optimiser, :eta],
 ]
 
 include_cols = [
     :id,
+    :dataset_alias,
     :split,
-    :dataset,
     :seed,
     :loss,
+    :file_solution
 ]
 
 use_default_metric = true
 
-for (name, df) in data_frames
-    df_joined = join_cols(df; metrics, to_join, include_cols)
-    path = joinpath(DATADIR, "results", "metrics_$(name).tex")
+for agg in [mean, median]
+    for (keys, grp) in pairs(groupby(final_df, ["dataset_alias"]))
+        name = keys["dataset_alias"]
 
-    mkpath(dirname(path))
-    open(path, "w") do io
-        dfs = []
-        for metric in first.(metrics)
-            df_best = best_table(df_joined, metric; split=:test, use_default_metric)
-            rename!(df_best, [:Formulation, metric])
-            push!(dfs, df_best)
-        end
+        grp_joined = join_cols(grp; metrics, to_join, include_cols)
+        rename!(grp_joined, :dataset_alias => :dataset)
+        grp_joined[:, "default_metric"] = loss_map.(grp_joined[:, "loss"], "default_metric")
 
-        df_best = innerjoin(dfs...; on=:Formulation)
-        perm = sortperm(order_loss.(df_best.Formulation))
-        df_best.Formulation = map_loss.(df_best.Formulation)
-        df_best = df_best[perm, :]
+        path = joinpath(DATADIR, results_subdir, "metrics_$(agg)_$(name).tex")
 
-        highlight_best = []
-        for j in 2:size(df_best, 2)
-            valmax = maximum(skipmissing(df_best[:, j]))
-            for i in findall(==(valmax), skipmissing(df_best[:, j]))
-                push!(highlight_best, (i, j))
+        mkpath(dirname(path))
+        open(path, "w") do io
+            dfs = []
+            for metric in first.(metrics)
+                df_best = best_table(grp_joined, metric; split=:test, use_default_metric, agg)
+                rename!(df_best, [:Formulation, metric])
+                push!(dfs, df_best)
             end
-        end
 
-        highlight_worst = []
-        for j in 2:size(df_best, 2)
-            valmax = minimum(skipmissing(df_best[:, j]))
-            for i in findall(==(valmax), skipmissing(df_best[:, j]))
-                push!(highlight_worst, (i, j))
+            df_best = innerjoin(dfs...; on=:Formulation)
+            perm = sortperm(loss_map.(df_best.Formulation, "order"))
+            df_best.Formulation = loss_map.(df_best.Formulation, "latex_name")
+            df_best = df_best[perm, :]
+
+            highlight_best = []
+            highlight_worst = []
+            for j in axes(df_best, 2)[2:end]
+                valmin, valmax = extrema(skipmissing(df_best[:, j]))
+                for i in findall(==(valmin), skipmissing(df_best[:, j]))
+                    push!(highlight_worst, (i, j))
+                end
+                for i in findall(==(valmax), skipmissing(df_best[:, j]))
+                    push!(highlight_best, (i, j))
+                end
             end
-        end
 
-        write(io, nice_table(
-            df_best;
-            caption="$(name)",
-            label="$(name)",
-            highlight_best=[highlight_best...,],
-            highlight_worst=[highlight_worst...,]
-        ))
-        write(io, "\n\n")
+            write(io, nice_table(
+                df_best;
+                caption="$(name)",
+                label="$(name)",
+                highlight_best=[highlight_best...,],
+                highlight_worst=[highlight_worst...,]
+            ))
+            write(io, "\n\n")
+        end
     end
 end
 
 #-------------------------------------------------------------------------------------------
 # Plots
 #-------------------------------------------------------------------------------------------
-const LOSS_MAP = Dict(
-    "CrossEntropy-0.5" => "baseline",
-    "DeepTopPush" => "deeptoppush",
-    "PatMatNP-1.0e-5" => "patmatnp_1e-5",
-    "PatMatNP-0.0001" => "patmatnp_1e-4",
-    "PatMatNP-0.001" => "patmatnp_1e-3",
-)
-
-const DATASET_MAP = Dict(
-    "Nsf5Small-1.0" => "nsf5",
-    "JMiPODSmall-1.0" => "jmipod",
-)
-
-to_join = [
-    :dataset => [:dataset, :ratio],
-    :loss => [:loss, :τ, :K, :ϵ],
-    :optimiser => [:optimiser, :eta],
-]
-
-include_cols = [
-    :id,
-    :split,
-    :dataset,
-    :seed,
-    :loss,
-]
-
-use_default_metric = true
-
-
-dfss = last.(data_frames)
-df_all = vcat(
-    dfss[1][dfss[1].seed.==4, :],
-    dfss[2][dfss[2].seed.==7, :],
-)
-df_joined = join_cols(df_all; metrics, to_join, include_cols)
-df_joined[:, :default_metric] .= map_default_metric.(df_joined.loss)
-df_best = Evaluation.select_best(df_joined, [:dataset, :loss])
-
-function find_best(df, ids, split=:test)
-    return findall(row -> row.id in ids && Symbol(row.split) == split, eachrow(df))
+function find_best(df)
+    id = Evaluation.select_best(DataFrame(df), [:dataset, :loss]).id[1]
+    return df[(df[:, "id"].==id).&(df[:, "split"].=="test"), :]
 end
 
-for row in eachrow(df_best)
-    dir = dirname(df_all.file_solution[find_best(df_all, row.id)[1]])
-    _, df_roc = get_roc(dir)
+for (keys_tmp, grp_tmp) in pairs(groupby(final_df, ["dataset_alias"]))
+    dataset_alias = keys_tmp["dataset_alias"]
 
+    grp_joined = join_cols(grp_tmp; metrics, to_join, include_cols)
+    rename!(grp_joined, :dataset_alias => :dataset)
+    grp_joined[:, "default_metric"] = loss_map.(grp_joined[:, "loss"], "default_metric")
 
-    loss = LOSS_MAP[row.loss]
-    dataset = DATASET_MAP[row.dataset]
-    path_csv = joinpath(DATADIR, "results", "stego_$(dataset)_$(loss).csv")
-    mkpath(dirname(path_csv))
-    CSV.write(path_csv, df_roc)
+    for (keys, grp) in pairs(groupby(grp_joined, ["loss", "seed"]))
+        loss_alias = loss_map(keys["loss"], "name")
+        seed = keys["seed"]
+
+        _, df_roc = get_roc(dirname(find_best(grp)[1, "file_solution"]))
+
+        path_csv = joinpath(DATADIR, results_subdir, dataset_alias, string(seed), "$(loss_alias).csv")
+        mkpath(dirname(path_csv))
+        CSV.write(path_csv, df_roc)
+    end
 end
