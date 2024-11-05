@@ -83,9 +83,6 @@ objectives = (
     CrossEntropy(ϵ=0.9),
     CrossEntropy(ϵ=0.99),
     CrossEntropy(ϵ=0.999),
-    # CrossEntropy(ϵ=0.1),
-    # CrossEntropy(ϵ=0.01),
-    # CrossEntropy(ϵ=0.001),
 )
 
 #-------------------------------------------------------------------------------------------
@@ -112,6 +109,40 @@ trains = (
         save_dir="steganography"
     )
     for seed in 1:10
+)
+
+for dataset in datasets
+    dir = string("Nsf5Small/", string(typeof(dataset).name.name, "-", dataset.ratio))
+    generate_configs(dir, (dataset,), (Linear(),), objectives, optimisers, trains)
+end
+
+#-------------------------------------------------------------------------------------------
+# Nsf5Small SGD
+#-------------------------------------------------------------------------------------------
+# optimisers
+optimisers = (
+    OptADAM(eta=1e-2, decay_every=50),
+)
+
+# SGD
+datasets = (
+    Nsf5Small(payload=0.2, ratio=1),
+    Nsf5Small(payload=0.2, ratio=0.5),
+    Nsf5Small(payload=0.2, ratio=0.1),
+)
+
+trains = (
+    TrainConfig(;
+        seed=seed,
+        epoch_max=1000,
+        checkpoint_every=50,
+        batch_neg=batch_size,
+        batch_pos=batch_size,
+        device="CPU",
+        save_dir="steganography"
+    )
+    for seed in 1:10
+    for batch_size in [16, 32, 128]
 )
 
 for dataset in datasets
@@ -171,12 +202,13 @@ trains = (
         epoch_max=30,
         checkpoint_every=10,
         eval_all=true,
-        batch_neg=128,
-        batch_pos=128,
+        batch_neg=batch_size,
+        batch_pos=batch_size,
         device="GPU",
         save_dir="steganography",
     )
     for seed in 1:10
+    for batch_size in [16, 32, 128]
 )
 
 for dataset in datasets
