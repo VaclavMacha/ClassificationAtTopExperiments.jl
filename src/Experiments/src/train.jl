@@ -307,7 +307,7 @@ function load_or_run(
             epoch_max=train_config.epoch_max,
             checkpoint_every=train_config.checkpoint_every,
             loss_every=train_config.loss_every,
-            p_update = train_config.p_update,
+            p_update=train_config.p_update,
             dir=dir,
             ε=train_config.ε
         )

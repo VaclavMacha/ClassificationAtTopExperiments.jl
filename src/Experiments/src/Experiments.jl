@@ -70,12 +70,35 @@ datadir(args...) = joinpath(PROJECT_DIR, "data", args...)
 datasetsdir(args...) = joinpath(PROJECT_DIR, "data", "datasets", args...)
 pretraineddir(args...) = joinpath(PROJECT_DIR, "data", "pretrained", args...)
 
+
+function copy_solution(path)
+    dir = dirname(path)
+    if !isdir(dir)
+        return
+    end
+
+    files = filter(isfile, readdir(joinpath(dir, "checkpoints"), join=true))
+    if isempty(files)
+        return
+    end
+    epochs = parse.(Int, filter.(isdigit, basename.(files)))
+    i = argmax(epochs)
+    cp(files[i], path)
+end
+
+
+
 function solution_path(dir::AbstractString, epoch::Int=-1)
     if epoch < 0
-        joinpath(dir, "solution.bson")
+        path = joinpath(dir, "solution.bson")
+
+        if !isfile(path)
+            copy_solution(path)
+        end
     else
-        joinpath(dir, "checkpoints", "checkpoint_epoch=$(epoch).bson")
+        path = joinpath(dir, "checkpoints", "checkpoint_epoch=$(epoch).bson")
     end
+    return path
 end
 
 config_path(dir::AbstractString) = joinpath(dir, "config.toml")

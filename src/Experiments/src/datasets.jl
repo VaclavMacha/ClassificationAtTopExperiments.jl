@@ -172,7 +172,8 @@ end
 parse_type(::Val{:JMiPODDebug}) = JMiPODDebug
 get_ids(::JMiPODDebug) = 1:1
 
-jmipoddir(args...) = datasetsdir("JMiPOD", args...)
+# jmipoddir(args...) = datasetsdir("JMiPOD", args...)
+jmipoddir(args...) = datasetsdir("JMiPOD_julia", args...)
 actordir(id::Int, args...) = jmipoddir("actor$(lpad(id, 5, "0"))", args...)
 list_jpgs(dir) = filter(file -> endswith(file, ".jpg"), readdir(dir; join=true))
 

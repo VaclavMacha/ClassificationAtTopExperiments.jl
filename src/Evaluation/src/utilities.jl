@@ -207,8 +207,8 @@ function select_best(
     metric::Symbol,
     group_cols::Vector{Symbol};
     split::Symbol=:test,
-    use_default_metric::Bool = false,
-    remove_split_id::Bool = true
+    use_default_metric::Bool=false,
+    remove_split_id::Bool=true
 )
 
     df_best = combine(
@@ -242,7 +242,7 @@ function rank_table(
     metrics::Vector{Symbol}=Symbol[];
     split::Symbol=:test,
     rank_func::Function=x -> tiedrank(x; rev=true),
-    use_default_metric::Bool = false,
+    use_default_metric::Bool=false,
 )
     dfs = []
     for (i, metric) in enumerate(metrics)
@@ -273,15 +273,16 @@ function rank_table(
     return innerjoin(dfs..., on=:loss)
 end
 
-function measurement_metric(x; digits=2)
-    return round(median(x); digits)
+function measurement_metric(x; digits=2, agg=median)
+    return round(agg(x); digits)
 end
 
 function best_table(
     df::DataFrame,
     metric::Symbol;
     split::Symbol=:test,
-    use_default_metric::Bool = false,
+    use_default_metric::Bool=false,
+    agg=median,
 )
 
     df_best = select_best(df, metric, [:dataset, :seed, :loss]; split, use_default_metric)
@@ -289,9 +290,11 @@ function best_table(
         select!(df_best, Not(:default_metric))
     end
 
+    foo(x) = measurement_metric(x; agg=agg)
+
     df_best = combine(
         groupby(df_best, [:dataset, :loss]),
-        metric => measurement_metric => metric,
+        metric => foo => metric,
     )
     df_best = DataFrames.unstack(df_best, :loss, :dataset, metric)
     return df_best
@@ -300,11 +303,11 @@ end
 function nice_table(
     df;
     columns=names(df),
-    align= "l" * repeat("c", length(columns)-1),
-    caption = "",
-    label = "",
-    highlight_best::Vector{NTuple{2, Int}} = Vector{NTuple{2, Int}}[],
-    highlight_worst::Vector{NTuple{2, Int}} = Vector{NTuple{2, Int}}[],
+    align="l" * repeat("c", length(columns) - 1),
+    caption="",
+    label="",
+    highlight_best::Vector{NTuple{2,Int}}=Vector{NTuple{2,Int}}[],
+    highlight_worst::Vector{NTuple{2,Int}}=Vector{NTuple{2,Int}}[],
 )
 
     n = length(columns)
