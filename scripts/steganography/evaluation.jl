@@ -152,8 +152,8 @@ end
 ratios = [0.1, 0.5, 1]
 batch_sizes = [32, 64, 256]
 final_df = vcat(
-    filter(row -> isvalidrow(row, "JMiPODSmall"; ratios, batch_sizes=[32, 64, 256]), df),
-    filter(row -> isvalidrow(row, "Nsf5Small"; ratios, batch_sizes=[0, 32]), df),
+    filter(row -> isvalidrow(row, "JMiPODSmall"; ratios, batch_sizes), df),
+    filter(row -> isvalidrow(row, "Nsf5Small"; ratios, batch_sizes=[0, batch_sizes...]), df),
 )
 final_df[:, "dataset_alias"] = alias.(eachrow(final_df))
 
