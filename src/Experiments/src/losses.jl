@@ -30,6 +30,25 @@ function materialize(o::CrossEntropy)
     return loss
 end
 
+# ECM
+@kwdef struct ECM <: LossType
+    λ::Float64 = 1e-3
+end
+
+parse_type(::Val{:ECM}) = ECM
+
+function materialize(o::ECM)
+    λ = Float32(o.λ)
+
+    loss(x, y, model, pars) = loss(y, model(x), pars)
+
+    function loss(y, s::AbstractArray, pars)
+        mask = y .== +1
+        mn = mean(s[mask])
+        λ / 2 * sum(sqsum, pars) + mean(Flux.softplus(s[.!mask] .- mn))
+    end
+    return loss
+end
 # ------------------------------------------------------------------------------------------
 # PatMat and PatMatNP
 # ------------------------------------------------------------------------------------------

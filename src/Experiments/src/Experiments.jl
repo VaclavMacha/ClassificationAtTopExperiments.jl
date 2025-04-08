@@ -39,7 +39,7 @@ export CIFAR10, CIFAR20, CIFAR100
 export SVHN2, SVHN2Extra
 export Ember
 
-export CrossEntropy
+export CrossEntropy, ECM
 export PatMat, PatMatNP
 export TopPush, TopPushK, TopMeanK, TauFPL
 export Grill, GrillNP
@@ -73,7 +73,7 @@ pretraineddir(args...) = joinpath(PROJECT_DIR, "data", "pretrained", args...)
 
 function copy_solution(path)
     dir = dirname(path)
-    if !isdir(dir)
+    if !isdir(dir) || !isdir(joinpath(dir, "checkpoints"))
         return
     end
 
