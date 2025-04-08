@@ -49,10 +49,17 @@ else
     Pkg.instantiate()
     using Experiments
 
+    function Experiments.datadir(args...)
+        return joinpath("/mnt/personal/machava2/experiments", args...)
+    end
+
     function Experiments.datasetsdir(args...)
         return joinpath("/mnt/personal/machava2/datasets", args...)
     end
 
+    function Experiments.pretraineddir(args...)
+        return joinpath("/mnt/personal/machava2/pretrained", args...)
+    end
     try
         load_or_run(path)
     catch e
