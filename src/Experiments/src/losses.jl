@@ -232,7 +232,9 @@ end
 # ------------------------------------------------------------------------------------------
 # DeepTopPush
 # ------------------------------------------------------------------------------------------
-@kwdef struct DeepTopPush <: LossType
+abstract type AbstractDeepTopPush <: LossType end
+
+@kwdef struct DeepTopPush <: AbstractDeepTopPush
     λ::Float64 = 1e-3
     surrogate::String = "Hinge"
 end
@@ -252,7 +254,7 @@ function materialize(o::DeepTopPush)
     return loss
 end
 
-@kwdef struct DeepTopPushCross <: LossType
+@kwdef struct DeepTopPushCross <: AbstractDeepTopPush
     λ::Float64 = 1e-3
     α::Float64 = 0.5
     surrogate::String = "Hinge"
@@ -275,13 +277,14 @@ function materialize(o::DeepTopPushCross)
 end
 
 # ------------------------------------------------------------------------------------------
-# DeepTopPush
+# SVM
 # ------------------------------------------------------------------------------------------
 @kwdef struct SVM <: LossType
     λ::Float64 = 1e-3
 end
 
 parse_type(::Val{:SVM}) = SVM
+
 
 function materialize_dual(o::SVM, n_pos::Int)
     λ = Float32(o.λ)
