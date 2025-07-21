@@ -88,7 +88,11 @@ function load_or_run(
             end
             model = materialize(dataset, model_type) |> device
             pars = Flux.params(model)
-            loss = materialize(loss_type)
+            if isa(loss_type, MODE)
+                loss = materialize(loss_type, sum(train.targets == 0))
+            else
+                loss = materialize(loss_type)
+            end
         end
 
         # Batch loader
@@ -96,7 +100,11 @@ function load_or_run(
         if batch_size == 0
             loader = (getobs(train),)
         else
-            buffer = isa(model_type, DeepTopPush) ? () -> Int[] : AccuracyAtTop.buffer_inds
+            if isa(model_type, AbstractDeepTopPush) || isa(model_type, MODE)
+                buffer = AccuracyAtTop.buffer_inds
+            else
+                buffer = () -> Int[]
+            end
             loader = BatchLoader(train; buffer, batch_neg, batch_pos)
         end
         iter_max = length(loader)

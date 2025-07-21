@@ -18,6 +18,7 @@ using Statistics
 using StatsBase
 using TimerOutputs
 using TOML
+using Zygote
 
 import AccuracyAtTopPrimal
 import AccuracyAtTop
@@ -45,6 +46,7 @@ export TopPush, TopPushK, TopMeanK, TauFPL
 export Grill, GrillNP
 export DeepTopPush, DeepTopPushCross
 export SVM
+export MODE
 
 export Linear
 export Gaussian

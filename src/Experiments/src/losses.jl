@@ -295,3 +295,82 @@ function materialize_dual(o::SVM, n_pos::Int)
     end
     return ClassificationAtTopDual.SVM(; C)
 end
+
+
+# ------------------------------------------------------------------------------------------
+# MODE loss
+# ------------------------------------------------------------------------------------------
+@kwdef struct MODE <: LossType
+    fpr::Float64 = 1e-3
+end
+
+parse_type(::Val{:MODE}) = MODE
+
+"""
+    interp1d(x, y, xnew)
+
+Linear 1D interpolation for Julia vectors with scalar query point (CPU/GPU compatible).
+This function returns the interpolated value at the desired query point `xnew`.
+
+Parameters
+----------
+x : Vector
+    A 1-D vector of real values (must be sorted).
+y : Vector  
+    A 1-D vector of real values, same length as x.
+xnew : Number
+    A scalar value where interpolation is desired.
+
+Returns
+-------
+ynew : Number
+    Interpolated value at query point xnew
+"""
+function interp1d(x::AbstractVector, y::AbstractVector, xnew::Number)
+    @assert length(x) == length(y) "x and y must have the same length"
+    @assert length(x) >= 2 "x and y must have at least 2 points"
+    
+    n = length(x)
+    ϵ = eps(eltype(y))
+    
+    # Find the index where xnew should be inserted
+    idx = clamp(searchsortedlast(x, xnew), 1, n - 1)
+    x₁, x₂ = x[idx], x[idx + 1]
+    y₁, y₂ = y[idx], y[idx + 1]
+    slope = (y₂ - y₁) / (ϵ + (x₂ - x₁))
+    ynew = y₁ + slope * (xnew - x₁)
+    return ynew
+end
+
+
+function init_y(nobs, number_of_covers)
+    start = 1/nobs
+    stop = 1.0
+    y = collect(range(1 ./ nobs, 1, nobs))
+    if number_of_covers > 0 
+        y[end-1] = 1 - 1/number_of_covers
+    end
+    y
+end
+
+function eicdf(x, x_new, number_of_covers = 0)
+    x = sort(x)
+    y = Zygote.@ignore init_y(length(x), number_of_covers)
+    interp1d(y, x, x_new)
+end
+
+function materialize(o::MODE, number_of_covers::Integer)
+    fpr = Float32(o.fpr)
+    loss(x, y, model, pars) = loss(y, model(x), pars)
+
+    function loss(y, s::AbstractArray, pars)
+        cover_logits = s[y .== 0]
+        stego_logits = s[y .== 1]
+        worst_index = partialsortperm(cover_logits, 1:2, rev = true)
+        AccuracyAtTop.update_buffer!(cover_logits[worst_index], worst_index)
+
+        γ = eicdf(cover_logits, 1-fpr, number_of_covers)
+        return mean(softplus.(γ .- stego_logits)) + mean(softplus.(cover_logits .- γ))
+    end
+    return loss
+end
