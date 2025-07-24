@@ -160,6 +160,16 @@ struct BatchLoader{D<:LabeledDataset, B}
     end
 end
 
+function _find_delayed_inds(loader::BatchLoader)
+    batch_neg = loader.batch_neg
+    batch_pos = loader.batch_pos
+    batch_size = batch_neg + batch_pos
+
+    delayed_inds = loader.buffer()
+    filter!(i -> 1 <= i <= batch_size, delayed_inds)
+    return delayed_inds
+end
+
 function _find_inds!(loader::BatchLoader)
     batch_neg = loader.batch_neg
     batch_pos = loader.batch_pos
