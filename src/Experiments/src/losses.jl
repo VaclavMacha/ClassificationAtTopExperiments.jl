@@ -7,6 +7,7 @@ aggregation(y, s, ϵ=0.5f0) = mean(ϵ .* y .* s .+ (1 - ϵ) .* (1 .- y) .* s)
 surrogate(name::String, args...) = surrogate(Val(Symbol(name)), args...)
 surrogate(::Val{:Hinge}, ϑ=1) = x -> AccuracyAtTopPrimal.hinge(x, ϑ)
 surrogate(::Val{:Quadratic}, ϑ=1) = x -> AccuracyAtTopPrimal.quadratic(x, ϑ)
+surrogate(::Val{:Softplus}, ϑ=1) = x -> softplus(x)
 
 # ------------------------------------------------------------------------------------------
 # CrossEntropy
