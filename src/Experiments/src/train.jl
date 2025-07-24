@@ -100,7 +100,7 @@ function load_or_run(
         if batch_size == 0
             loader = (getobs(train),)
         else
-            if isa(model_type, AbstractDeepTopPush) || isa(model_type, MODE)
+            if isa(loss_type, AbstractDeepTopPush) || isa(loss_type, MODE)
                 buffer = AccuracyAtTop.buffer_inds
             else
                 buffer = () -> Int[]
