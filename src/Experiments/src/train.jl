@@ -138,6 +138,10 @@ function load_or_run(
 
         # Training
         flag = false
+        training_stats = Dict(
+            :loss_batch => Float32[],
+            :threshold_id => Int[]
+        )
         local training_loss
         start!(p, optionals()...)
         for epoch in 1:epoch_max
@@ -161,6 +165,15 @@ function load_or_run(
                     end
                     free_memory!(x)
 
+                    # update
+                    push!(training_stats[:loss_batch], training_loss)
+                    if isa(loader, BatchLoader)
+                        _inds_delayed = _find_delayed_inds(loader)
+                        if !isnothing(_inds_delayed)
+                            append!(training_stats[:threshold_id], _inds_delayed)
+                        end
+                    end
+
                     # break if corrupted solution
                     flag = isnan(training_loss) || isinf(training_loss)
                     flag && break
@@ -170,7 +183,7 @@ function load_or_run(
             # checkpoint
             if mod(epoch, checkpoint_every) == 0 || epoch == epoch_max || flag
                 evl = epoch == epoch_max ? true : eval_all
-                solution = checkpoint!(state, model, pars, loss; eval_all=evl)
+                solution = checkpoint!(state, model, pars, loss; eval_all=evl, training_stats=training_stats)
             end
             @timeit TO "Garbage Collector" begin
                 GC.gc(true)
@@ -183,10 +196,11 @@ function load_or_run(
     return solution
 end
 
-function checkpoint!(state, model, pars, loss; eval_all::Bool=true)
+function checkpoint!(state, model, pars, loss; eval_all::Bool=true, kwargs...)
     solution = Dict(
         :model => deepcopy(cpu(model)),
         :epoch => state[:epoch],
+        kwargs...
     )
 
     loss_train = get!(state, :loss_train, Float32[])
