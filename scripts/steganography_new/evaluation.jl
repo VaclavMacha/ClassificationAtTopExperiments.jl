@@ -11,7 +11,7 @@ using Evaluation: plot_roc, get_roc, load_checkpoint
 using Evaluation.ProgressMeter: @showprogress
 
 force = false
-date = "2025-07-23"
+date = "2025-08-19"
 
 const DATA_DIR = "/mnt/personal/machava2/experiments/steganography_new"
 const RESULTS_DIR = "/mnt/personal/machava2/results/tifs_new/$(date)"
@@ -190,6 +190,42 @@ const LOSS_MAP = Dict(
         "order" => 25,
         "default_metric" => :tpr_at_fpr001,
     ),
+    "DelayedPatMatNP-1.0e-5" => Dict(
+        "name" => "DelayedPatMat-NP(1e-5)",
+        "latex_name" => "DelayedPatMatNP(\$10^{-5}\$)",
+        "order" => 26,
+        "default_metric" => :tpr_at_fpr00001,
+    ),
+    "DelayedPatMatNP-0.0001" => Dict(
+        "name" => "DelayedPatMat-NP(1e-4)",
+        "latex_name" => "DelayedPatMatNP(\$10^{-4}\$)",
+        "order" => 27,
+        "default_metric" => :tpr_at_fpr0001,
+    ),
+    "DelayedPatMatNP-0.001" => Dict(
+        "name" => "DelayedPatMat-NP(1e-3)",
+        "latex_name" => "DelayedPatMatNP(\$10^{-3}\$)",
+        "order" => 28,
+        "default_metric" => :tpr_at_fpr001,
+    ),
+    "AdaptiveDelayedPatMatNP-1.0e-5" => Dict(
+        "name" => "AdaptiveDelayedPatMat-NP(1e-5)",
+        "latex_name" => "AdaptiveDelayedPatMatNP(\$10^{-5}\$)",
+        "order" => 29,
+        "default_metric" => :tpr_at_fpr00001,
+    ),
+    "AdaptiveDelayedPatMatNP-0.0001" => Dict(
+        "name" => "AdaptiveDelayedPatMat-NP(1e-4)",
+        "latex_name" => "AdaptiveDelayedPatMatNP(\$10^{-4}\$)",
+        "order" => 30,
+        "default_metric" => :tpr_at_fpr0001,
+    ),
+    "AdaptiveDelayedPatMatNP-0.001" => Dict(
+        "name" => "AdaptiveDelayedPatMat-NP(1e-3)",
+        "latex_name" => "AdaptiveDelayedPatMatNP(\$10^{-3}\$)",
+        "order" => 31,
+        "default_metric" => :tpr_at_fpr001,
+    ),
 )
 
 loss_map(loss::AbstractString, key::AbstractString) = LOSS_MAP[loss][key]
@@ -338,7 +374,7 @@ end
 
 replac_results = false
 
-try 
+try
     @showprogress for (keys_tmp, grp_tmp) in pairs(groupby(final_df, ["dataset_alias"]))
         if isempty(grp_tmp)
             continue

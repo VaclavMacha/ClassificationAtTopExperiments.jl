@@ -14,7 +14,7 @@ objectives = [
     "PatMat-NP(1e-3)",
 ]
 
-base_dir = "/home/machava2/projects/ClassificationAtTopExperiments.jl/data/steganography/results_tifs_2024-11-04"
+base_dir = "/home/machava2/projects/ClassificationAtTopExperiments.jl/data/steganography/results_tifs_2024-11-05"
 
 for dataset_path in filter(isdir, readdir(base_dir, join=true))
     dataset = basename(dataset_path)

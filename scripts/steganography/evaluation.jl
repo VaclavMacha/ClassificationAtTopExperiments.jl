@@ -1,14 +1,72 @@
 using DrWatson
-@quickactivate("ClassificationAtTopExperiments.jl")
+quickactivate(
+    "/home/machava2/projects/ClassificationAtTopExperiments.jl",
+    "ClassificationAtTopExperiments.jl",
+)
 
 using Evaluation
 using Evaluation.Plots
 
-using Evaluation: plot_roc, get_roc
+using Evaluation: plot_roc, get_roc, load_checkpoint
+using Evaluation.ProgressMeter: @showprogress
+
+force = false
+date = "2025-07-20"
+
+const DATA_DIR = "/mnt/personal/machava2/experiments/steganography"
+const RESULTS_DIR = "/mnt/personal/machava2/results/tifs/$(date)"
 
 #-------------------------------------------------------------------------------------------
 # Utilities
 #-------------------------------------------------------------------------------------------
+function plot_checkpoint(path, savedir, loss_alias; nbins::Integer=101, replace::Bool=false)
+    d = load_checkpoint(path)
+
+    for split in [:train, :valid, :test]
+        loss_path = joinpath(savedir, "$(loss_alias)_$(split).png")
+        loss_csv_path = joinpath(savedir, "$(loss_alias)_$(split).csv")
+
+        if isfile(loss_path) && isfile(loss_csv_path) && !replace
+            continue
+        end
+
+        y = vec(d[split][:y])
+        s = vec(d[split][:s])
+
+        # histograms
+        plt = plot(
+            legend=:topright,
+            title="$(loss_alias): $(split)",
+            xlabel="Score",
+            ylabel="Counts",
+        )
+
+        s_neg = @view s[y.==0]
+        histogram!(
+            plt,
+            s_neg;
+            alpha=0.4,
+            label="Negative scores",
+            bins=range(extrema(s_neg)..., length=nbins),
+        )
+
+        s_pos = @view s[y.==1]
+        histogram!(
+            plt,
+            s_pos;
+            alpha=0.4,
+            label="Positive scores",
+            bins=range(extrema(s_pos)..., length=nbins),
+        )
+
+        mkpath(savedir)
+        savefig(plt, loss_path)
+
+        df = DataFrame(score=s, label=y)
+        CSV.write(loss_csv_path, df)
+    end
+end
+
 const LOSS_MAP = Dict(
     "CrossEntropy-0.5" => Dict(
         "name" => "CrossEntropy(0.5)",
@@ -82,6 +140,84 @@ const LOSS_MAP = Dict(
         "order" => 12,
         "default_metric" => :tpr_at_fpr001,
     ),
+    "ECM" => Dict(
+        "name" => "ECM",
+        "latex_name" => "ECM",
+        "order" => 13,
+        "default_metric" => :auc,
+    ),
+    "GrillNP-1.0e-5" => Dict(
+        "name" => "Grill-NP(1e-5)",
+        "latex_name" => "GrillNP(\$10^{-5}\$)",
+        "order" => 14,
+        "default_metric" => :tpr_at_fpr00001,
+    ),
+    "GrillNP-0.0001" => Dict(
+        "name" => "Grill-NP(1e-4)",
+        "latex_name" => "GrillNP(\$10^{-4}\$)",
+        "order" => 15,
+        "default_metric" => :tpr_at_fpr0001,
+    ),
+    "GrillNP-0.001" => Dict(
+        "name" => "Grill-NP(1e-3)",
+        "latex_name" => "GrillNP(\$10^{-3}\$)",
+        "order" => 16,
+        "default_metric" => :tpr_at_fpr001,
+    ),
+    "GrillNP-0.999" => Dict(
+        "name" => "Grill-NP(0.999)",
+        "latex_name" => "GrillNP(0.999)",
+        "order" => 17,
+        "default_metric" => :tpr_at_fpr001,
+    ),
+    "GrillNP-0.9999" => Dict(
+        "name" => "Grill-NP(0.9999)",
+        "latex_name" => "GrillNP(0.9999)",
+        "order" => 18,
+        "default_metric" => :tpr_at_fpr0001,
+    ),
+    "GrillNP-0.99999" => Dict(
+        "name" => "Grill-NP(0.99999)",
+        "latex_name" => "GrillNP(0.99999)",
+        "order" => 19,
+        "default_metric" => :tpr_at_fpr00001,
+    ),
+    "TauFPL-1.0e-5" => Dict(
+        "name" => "TauFPL(1e-5)",
+        "latex_name" => "\$\tau\$FPL(\$10^{-5}\$)",
+        "order" => 20,
+        "default_metric" => :tpr_at_fpr00001,
+    ),
+    "TauFPL-0.0001" => Dict(
+        "name" => "TauFPL(1e-4)",
+        "latex_name" => "\$\tau\$FPL(\$10^{-4}\$)",
+        "order" => 21,
+        "default_metric" => :tpr_at_fpr0001,
+    ),
+    "TauFPL-0.001" => Dict(
+        "name" => "TauFPL(1e-3)",
+        "latex_name" => "\$\tau\$FPL(\$10^{-3}\$)",
+        "order" => 22,
+        "default_metric" => :tpr_at_fpr001,
+    ),
+    "MODE-1.0e-5" => Dict(
+        "name" => "MODE(1e-5)",
+        "latex_name" => "MODE(\$10^{-5}\$)",
+        "order" => 23,
+        "default_metric" => :tpr_at_fpr00001,
+    ),
+    "MODE-0.0001" => Dict(
+        "name" => "MODE(1e-4)",
+        "latex_name" => "MODE(\$10^{-4}\$)",
+        "order" => 24,
+        "default_metric" => :tpr_at_fpr0001,
+    ),
+    "MODE-0.001" => Dict(
+        "name" => "MODE(1e-3)",
+        "latex_name" => "MODE(\$10^{-3}\$)",
+        "order" => 25,
+        "default_metric" => :tpr_at_fpr001,
+    ),
 )
 
 loss_map(loss::AbstractString, key::AbstractString) = LOSS_MAP[loss][key]
@@ -106,20 +242,16 @@ const METRIC = Dict(
     :auc => "ROC AUC",
 )
 
-const DATADIR = "/home/machava2/projects/ClassificationAtTopExperiments.jl/data/steganography"
-
 #-------------------------------------------------------------------------------------------
 # Loading DataFrames
 #-------------------------------------------------------------------------------------------
-results_subdir = "results_tifs_2024-11-04"
-force = false
-if !isdir(joinpath(DATADIR, results_subdir))
-    mkdir(joinpath(DATADIR, results_subdir))
+if !isdir(RESULTS_DIR)
+    mkdir(RESULTS_DIR)
 end
 
-file = joinpath(DATADIR, results_subdir, "metrics.csv")
+file = joinpath(RESULTS_DIR, "metrics.csv")
 if !isfile(file) || force
-    df = evaluation(DATADIR; metrics)
+    df = evaluation(DATA_DIR; metrics)
     df[:, "batch_size"] = df[:, "batch_pos"] + df[:, "batch_neg"]
 
     CSV.write(file, df)
@@ -137,7 +269,6 @@ function isvalidrow(
         String(row.dataset) == dataset,
         isempty(ratios) || in(row.ratio, ratios),
         isempty(batch_sizes) || in(row.batch_size, batch_sizes),
-        !(String(row.loss) == "CrossEntropy" && in(row.ϵ, [0.1, 0.01, 0.001])),
     ])
 end
 
@@ -146,7 +277,8 @@ function alias(row)
     payload = lpad(Int(100 * row.payload), 3, "0")
     ratio = lpad(Int(100 * row.ratio), 3, "0")
     batch_size = row.batch_size
-    return "$(dataset)_payload=$(payload)_ratio=$(ratio)_batchsize=$(batch_size)"
+    epochs = row.epoch_max
+    return "$(dataset)_payload=$(payload)_ratio=$(ratio)_batchsize=$(batch_size)_epochs=$(epochs)"
 end
 
 ratios = [0.1, 0.5, 1]
@@ -158,49 +290,49 @@ final_df = vcat(
 final_df[:, "dataset_alias"] = alias.(eachrow(final_df))
 
 
-# #-------------------------------------------------------------------------------------------
-# # critical diagrams
-# #-------------------------------------------------------------------------------------------
-# to_join = [
-#     :dataset => [:dataset, :ratio, :seed],
-#     :loss => [:loss, :τ, :K, :ϵ],
-#     :optimiser => [:optimiser, :eta],
-# ]
+#-------------------------------------------------------------------------------------------
+# critical diagrams
+#-------------------------------------------------------------------------------------------
+to_join = [
+    :dataset => [:dataset, :ratio, :seed],
+    :loss => [:loss, :τ, :K, :ϵ],
+    :optimiser => [:optimiser, :eta],
+]
 
-# include_cols = [
-#     :id,
-#     :split,
-#     :dataset,
-#     :loss,
-# ]
+include_cols = [
+    :id,
+    :split,
+    :dataset,
+    :loss,
+]
 
-# α = 0.05
-# y_step = 3.5
+α = 0.05
+y_step = 3.5
 
 
-# df_joined = join_cols(df; metrics, to_join, include_cols)
-# df_ranks = rank_table(df_joined, first.(metrics))
+df_joined = join_cols(df; metrics, to_join, include_cols)
+df_ranks = rank_table(df_joined, first.(metrics))
 
-# path = joinpath(DATADIR, results_subdir, "critical_diagrams.tex")
-# mkpath(dirname(path))
+path = joinpath(RESULTS_DIR, "critical_diagrams.tex")
+mkpath(dirname(path))
 
-# open(path, "w") do io
-#     ymin = 0
-#     for metric in reverse(first.(metrics))
-#         loss = loss_map.(df_ranks.loss, "latex_name")
-#         ranks = df_ranks[:, metric]
-#         cv = nemenyi_cd(length(loss), df_ranks.n_datasets[1]; α)
+open(path, "w") do io
+    ymin = 0
+    for metric in reverse(first.(metrics))
+        loss = loss_map.(df_ranks.loss, "latex_name")
+        ranks = df_ranks[:, metric]
+        cv = nemenyi_cd(length(loss), df_ranks.n_datasets[1]; α)
 
-#         write(io, critical_diagram(loss, ranks, cv; ymin, title="$(METRIC[metric])"))
-#         ymin += y_step
-#     end
-# end
+        write(io, critical_diagram(loss, ranks, cv; ymin, title="$(METRIC[metric])"))
+        ymin += y_step
+    end
+end
 
 #-------------------------------------------------------------------------------------------
 # mean metrics
 #-------------------------------------------------------------------------------------------
 to_join = [
-    :loss => [:loss, :τ, :K, :ϵ],
+    :loss => [:loss, :τ, :K, :ϵ, :fpr],
     :optimiser => [:optimiser, :eta],
 ]
 
@@ -223,7 +355,7 @@ for agg in [mean, median]
         rename!(grp_joined, :dataset_alias => :dataset)
         grp_joined[:, "default_metric"] = loss_map.(grp_joined[:, "loss"], "default_metric")
 
-        path = joinpath(DATADIR, results_subdir, "metrics_$(agg)_$(name).tex")
+        path = joinpath(RESULTS_DIR, "metrics_$(agg)_$(name).tex")
 
         mkpath(dirname(path))
         open(path, "w") do io
@@ -268,24 +400,55 @@ end
 #-------------------------------------------------------------------------------------------
 function find_best(df)
     id = Evaluation.select_best(DataFrame(df), [:dataset, :loss]).id[1]
-    return df[(df[:, "id"].==id).&(df[:, "split"].=="test"), :]
+    return df[(df[:, "id"].==id).&(df[:, "split"].==eltype(df[:, "split"])("test")), :]
 end
 
-for (keys_tmp, grp_tmp) in pairs(groupby(final_df, ["dataset_alias"]))
-    dataset_alias = keys_tmp["dataset_alias"]
+replac_results = false
 
-    grp_joined = join_cols(grp_tmp; metrics, to_join, include_cols)
-    rename!(grp_joined, :dataset_alias => :dataset)
-    grp_joined[:, "default_metric"] = loss_map.(grp_joined[:, "loss"], "default_metric")
+try
+    @showprogress for (keys_tmp, grp_tmp) in pairs(groupby(final_df, ["dataset_alias"]))
+        if isempty(grp_tmp)
+            continue
+        end
+        dataset_alias = keys_tmp["dataset_alias"]
 
-    for (keys, grp) in pairs(groupby(grp_joined, ["loss", "seed"]))
-        loss_alias = loss_map(keys["loss"], "name")
-        seed = keys["seed"]
+        grp_joined = join_cols(grp_tmp; metrics, to_join, include_cols)
+        rename!(grp_joined, :dataset_alias => :dataset)
+        grp_joined[:, "default_metric"] = loss_map.(grp_joined[:, "loss"], "default_metric")
 
-        _, df_roc = get_roc(dirname(find_best(grp)[1, "file_solution"]))
+        for (keys, grp) in pairs(groupby(grp_joined, ["loss", "seed"]))
+            loss_alias = loss_map(keys["loss"], "name")
+            seed = keys["seed"]
 
-        path_csv = joinpath(DATADIR, results_subdir, dataset_alias, string(seed), "$(loss_alias).csv")
-        mkpath(dirname(path_csv))
-        CSV.write(path_csv, df_roc)
+            best = find_best(grp)
+            if isempty(best)
+                continue
+            end
+            file_solution = best[1, "file_solution"]
+
+            # ROC
+            path_csv = joinpath(RESULTS_DIR, dataset_alias, string(seed), "$(loss_alias).csv")
+            if !isfile(path_csv) || replac_results
+                _, df_roc = get_roc(dirname(file_solution))
+                if !(df_roc isa Nothing)
+                    mkpath(dirname(path_csv))
+                    CSV.write(path_csv, df_roc)
+                end
+            end
+
+            # histograms
+            if isfile(file_solution)
+                plot_checkpoint(
+                    file_solution,
+                    joinpath(RESULTS_DIR, "histograms", dataset_alias, string(seed)),
+                    loss_alias,
+                    nbins=101,
+                    replace=replac_results,
+                )
+            end
+        end
     end
+catch e
+    @warn string(e)
+    @warn "Evaluation failed"
 end
