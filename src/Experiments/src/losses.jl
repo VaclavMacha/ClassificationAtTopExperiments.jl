@@ -115,6 +115,226 @@ function materialize_dual(o::AbstractPatMat, n_pos::Int)
 end
 
 # ------------------------------------------------------------------------------------------
+# Delayed PatMatNP
+# ------------------------------------------------------------------------------------------
+const CURRENT_EPOCH = Ref{Int}(0)
+const CURRENT_BATCH = Ref{Vector{Int}}(Int[])
+const DELAYED_LABELS = Ref{Vector{Int}}(Int[])
+const DELAYED_SCORES = Ref{Vector{Float32}}(Float32[])
+
+function buffer_init(y, s = fill(Inf32, length(y)); epoch = -1)
+    if epoch >= 0
+        CURRENT_EPOCH[] = epoch
+    end
+    DELAYED_LABELS[] = y
+    DELAYED_SCORES[] = s
+    return
+end
+
+function buffer_clear()
+    y = DELAYED_LABELS[]
+    s = DELAYED_SCORES[]
+    DELAYED_LABELS[] = Int[]
+    DELAYED_SCORES[] = Float32[]
+    return y, s
+end
+
+function buffer_batch_update!(inds, epoch::Int = -1)
+    if epoch > 0
+        CURRENT_EPOCH[] = epoch
+    end
+    CURRENT_BATCH[] = vec(inds)
+    return
+end
+
+function buffer_batch_clear()
+    inds = CURRENT_BATCH[]
+    CURRENT_BATCH[] = Int[]
+    return inds
+end
+
+function buffer_batch_extract()
+    return CURRENT_BATCH[]
+end
+
+function buffer_update!(inds, s)
+    DELAYED_SCORES[][vec(inds)] .= vec(s)
+    return
+end
+
+function buffer_extract()
+    inds = isinf.(DELAYED_SCORES[])
+    return DELAYED_LABELS[][.!inds], DELAYED_SCORES[][.!inds]
+end
+
+fp(x, t) = mean(softplus.(x .- t))
+fp(y, s, t) = fp(s[y .== 0], t)
+fn(x, t) = mean(softplus.(t .- x))
+fn(y, s, t) = fn(s[y .== 1], t)
+
+function find_threshold(y, s, τ)
+	s₀ = s[y .== 0]
+    return find_zero(t -> fp(s₀, t) - τ, (-Inf, Inf), Bisection())
+end
+
+function ChainRulesCore.rrule(f::typeof(find_threshold), y, s, τ)
+	s₀ = s[y .== 0]
+	t₀ = find_zero(t -> fp(s₀,  t) - τ, (-Inf, Inf), Bisection())
+	function pullback(Δ)
+		Δ = unthunk(Δ)
+		∇s = only(Zygote.gradient(x -> fp(y, x, t₀), s))
+		∇s = Δ .* ∇s ./ sum(∇s)
+		return(NoTangent(), NoTangent(), ∇s, NoTangent())
+	end
+	return t₀, pullback
+end
+
+function delayed_loss(y::AbstractVector, s::AbstractVector, τ::Real)
+    t₀ = find_threshold(y, s, τ)
+	return fn(y, s, t₀)
+end
+
+function ChainRulesCore.rrule(
+    f::typeof(delayed_loss),
+    y::AbstractVector,
+    s::AbstractVector,
+    τ::Real,
+)
+	s₀ = s[y .== 0]
+	t₀ = find_zero(t -> fp(s₀,  t) - τ, (-Inf, Inf), Bisection())
+	return fn(y, s, t₀), Δ -> (
+	    NoTangent(),
+		NoTangent(),
+		delayed_loss_pullback(Δ, t₀, y, s),
+		NoTangent(),
+	)
+end
+
+function delayed_loss_pullback(
+    Δ,
+    t₀::Real,
+    y::AbstractVector,
+    s::AbstractVector,
+)
+	∇s_pos = only(Zygote.gradient(x -> fn(y, x, t₀), s))
+	∇s_neg = only(Zygote.gradient(x -> fp(y, x, t₀), s))
+	γ = sum(∇s_pos) / sum(∇s_neg)
+	return (- Δ .* γ .* ∇s_neg) .+ (Δ .* ∇s_pos)
+end
+
+function delayed_loss(
+    y::AbstractVector,
+    s::AbstractVector,
+    τ::Real,
+    inds:: AbstractVector
+)
+    buffer_update!(inds, s)
+    y_all, s_all = buffer_extract()
+    return delayed_loss(y_all, s_all, τ)
+end
+
+function ChainRulesCore.rrule(
+    f::typeof(delayed_loss),
+    y::AbstractVector,
+    s::AbstractVector,
+    τ::Real,
+    inds:: AbstractVector
+)
+    buffer_update!(inds, s)
+    y_all, s_all = buffer_extract()
+	s₀ = s_all[y_all .== 0]
+	t₀ = find_zero(t -> fp(s₀,  t) - τ, (-Inf, Inf), Bisection())
+	return fn(y_all, s_all, t₀), Δ -> (
+	    NoTangent(),
+		NoTangent(),
+		delayed_loss_pullback(Δ, t₀, y, s, y_all, s_all),
+		NoTangent(),
+		NoTangent(),
+	)
+end
+
+function delayed_loss_pullback(
+    Δ,
+    t₀::Real,
+    y::AbstractVector,
+    s::AbstractVector,
+    y_all::AbstractVector,
+    s_all::AbstractVector
+)
+	∇s_pos = only(Zygote.gradient(x -> fn(y, x, t₀), s))
+	∇s_neg = only(Zygote.gradient(x -> fp(y, x, t₀), s))
+	∇s_all_neg = only(Zygote.gradient(x -> fp(y_all, x, t₀), s_all))
+	∇s_all_pos = only(Zygote.gradient(x -> fn(y_all, x, t₀), s_all))
+	γ = sum(∇s_all_pos) / sum(∇s_all_neg)
+	return (- Δ .* γ .* ∇s_neg) .+ (Δ .* ∇s_pos)
+end
+
+@kwdef struct DelayedPatMatNP <: AbstractPatMat
+    τ::Float64 = 0.01
+    λ::Float64 = 1e-3
+end
+
+parse_type(::Val{:DelayedPatMatNP}) = DelayedPatMatNP
+
+function materialize(o::DelayedPatMatNP)
+    τ = Float32(o.τ)
+    λ = Float32(o.λ)
+
+    loss(x, y, model, pars) = loss(y, model(x), pars)
+
+    function loss(y, s::AbstractArray, pars)
+        inds = vec(buffer_batch_extract())
+        if length(inds) == 0
+            λ / 2 * sum(sqsum, pars) + delayed_loss(vec(y), vec(s), τ)
+        else
+            λ / 2 * sum(sqsum, pars) + delayed_loss(vec(y), vec(s), τ, inds)
+        end
+    end
+    return loss
+end
+
+
+@kwdef struct AdaptiveDelayedPatMatNP <: AbstractPatMat
+    τ::Float64 = 0.01
+    epochs::Vector{Int} = []
+    τs::Vector{Float64} = []
+    λ::Float64 = 1e-3
+end
+
+parse_type(::Val{:AdaptiveDelayedPatMatNP}) = AdaptiveDelayedPatMatNP
+
+function materialize(o::AdaptiveDelayedPatMatNP)
+    τ = Float32(o.τ)
+    epochs = sort(o.epochs)
+    τs = Dict(epoch_max => Float32(τ) for (epoch_max, τ) in zip(o.epochs, o.τs))
+    λ = Float32(o.λ)
+
+    loss(x, y, model, pars) = loss(y, model(x), pars)
+
+    function find_tau()
+        epoch = CURRENT_EPOCH[]
+        for epoch_max in epochs
+            if epoch <= epoch_max
+               return τs[epoch_max]
+            end
+        end
+        return τ
+    end
+
+    function loss(y, s::AbstractArray, pars)
+        τ_actual = find_tau()
+        inds = vec(buffer_batch_extract())
+        if length(inds) == 0
+            λ / 2 * sum(sqsum, pars) + delayed_loss(vec(y), vec(s), τ_actual)
+        else
+            λ / 2 * sum(sqsum, pars) + delayed_loss(vec(y), vec(s), τ_actual, inds)
+        end
+    end
+    return loss
+end
+
+
+# ------------------------------------------------------------------------------------------
 # TopPush, TopPushK, TopMeanτ, tauFPL
 # ------------------------------------------------------------------------------------------
 abstract type AbstractTopPush <: LossType end
@@ -317,7 +537,7 @@ Parameters
 ----------
 x : Vector
     A 1-D vector of real values (must be sorted).
-y : Vector  
+y : Vector
     A 1-D vector of real values, same length as x.
 xnew : Number
     A scalar value where interpolation is desired.
@@ -330,10 +550,10 @@ ynew : Number
 function interp1d(x::AbstractVector, y::AbstractVector, xnew::Number)
     @assert length(x) == length(y) "x and y must have the same length"
     @assert length(x) >= 2 "x and y must have at least 2 points"
-    
+
     n = length(x)
     ϵ = eps(eltype(y))
-    
+
     # Find the index where xnew should be inserted
     idx = clamp(searchsortedlast(x, xnew), 1, n - 1)
     x₁, x₂ = x[idx], x[idx + 1]
@@ -348,7 +568,7 @@ function init_y(nobs, number_of_covers)
     start = 1/nobs
     stop = 1.0
     y = collect(range(1 ./ nobs, 1, nobs))
-    if number_of_covers > 0 
+    if number_of_covers > 0
         y[end-1] = 1 - 1/number_of_covers
     end
     y

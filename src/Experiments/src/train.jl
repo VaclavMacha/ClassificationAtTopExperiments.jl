@@ -106,6 +106,7 @@ function load_or_run(
                 buffer = () -> Int[]
             end
             loader = BatchLoader(train; buffer, batch_neg, batch_pos)
+            buffer_init(vec(train.targets); epoch = 0)
         end
         iter_max = length(loader)
 
@@ -140,9 +141,11 @@ function load_or_run(
         flag = false
         training_stats = Dict(
             :loss_batch => Float32[],
+            :loss_grad => Float32[],
             :threshold_id => Int[]
         )
         local training_loss
+        local training_loss_grad_norm
         start!(p, optionals()...)
         for epoch in 1:epoch_max
             state[:epoch] += 1
@@ -151,6 +154,10 @@ function load_or_run(
                     @timeit TO "Loading batch" begin
                         x, y = batch
                         x = device(x)
+                    end
+
+                    if isa(loader, BatchLoader) && isa(loss_type, DelayedPatMatNP)
+                        buffer_batch_update!(loader.last_batch, epoch)
                     end
 
                     # gradient step
@@ -167,6 +174,7 @@ function load_or_run(
 
                     # update
                     push!(training_stats[:loss_batch], training_loss)
+                    push!(training_stats[:loss_grad], sum(Statistics.norm, grads))
                     if isa(loader, BatchLoader)
                         _inds_delayed = _find_delayed_inds(loader)
                         if !isnothing(_inds_delayed)
@@ -217,11 +225,15 @@ function checkpoint!(state, model, pars, loss; eval_all::Bool=true, kwargs...)
             @timeit TO "Valid scores" y_valid, s_valid = eval_model(valid, model, device)
             @timeit TO "Test scores" y_test, s_test = eval_model(test, model, device)
 
+            y_delayed, s_delayed = buffer_clear()
+            inds_delayed = buffer_batch_clear()
             @timeit TO "Loss" begin
                 append!(loss_train, loss(y_train, s_train, pars))
                 append!(loss_valid, loss(y_valid, s_valid, pars))
                 append!(loss_test, loss(y_test, s_test, pars))
             end
+            buffer_init(y_delayed, s_delayed; epoch = -1)
+            buffer_batch_update!(inds_delayed)
 
             solution[:train] = Dict(:y => cpu(y_train), :s => cpu(s_train))
             solution[:valid] = Dict(:y => cpu(y_valid), :s => cpu(s_valid))

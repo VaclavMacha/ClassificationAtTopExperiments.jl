@@ -104,22 +104,50 @@ function evaluation(
     return df
 end
 
+function extract_epoch(filename::String)
+    # Using named capture group for better readability
+    pattern = r"checkpoint_epoch=(?<epoch>\d+)\.bson"
+    m = match(pattern, filename)
+
+    if !isnothing(m)
+        return parse(Int, m[:epoch])
+    else
+        return nothing
+    end
+end
+
+remove_epoch(; epoch = nothing, kwargs...) = (epoch, kwargs)
+
 function evaluation(
     path::AbstractString;
     metrics::Vector{<:Pair}=Pair[],
     id_start::Int=0,
     kwargs...
 )
+    _epoch, _kwargs = remove_epoch(; kwargs...)
 
     if isdir(path)
         dirs = list_subdirs(path)
         isempty(dirs) && return nothing
-        dfs = @showprogress map(enumerate(dirs)) do (id, dir)
-            return vcat(
-                evaluation(dir, id_start + id, metrics...; split=:train, kwargs...),
-                evaluation(dir, id_start + id, metrics...; split=:valid, kwargs...),
-                evaluation(dir, id_start + id, metrics...; split=:test, kwargs...),
-            )
+        id = 0
+        dfs = []
+        @showprogress for dir in dirs
+            if !isnothing(_epoch)
+                epochs = [_epoch]
+            else
+                checkpoints_dir = joinpath(dir, "checkpoints")
+                isdir(checkpoints_dir) || continue
+                epochs = filter(x -> !isnothing(x), extract_epoch.(readdir(checkpoints_dir)))
+            end
+            for epoch in epochs
+                id += 1
+                push!(
+                    dfs,
+                    evaluation(dir, id_start + id, metrics...; split=:train, epoch=epoch, _kwargs...),
+                    evaluation(dir, id_start + id, metrics...; split=:valid, epoch=epoch, _kwargs...),
+                    evaluation(dir, id_start + id, metrics...; split=:test, epoch=epoch, _kwargs...),
+                )
+            end
         end
         filter!(df -> isa(df, AbstractDataFrame), dfs)
         df = vcat(dfs...; cols=:union)

@@ -2,9 +2,11 @@ module Experiments
 
 using BSON
 using CSV
+using ChainRulesCore
 using DataFrames
 using Dates
 using Distributions
+using FiniteDifferences
 using Flux
 using HDF5
 using ImageCore
@@ -14,6 +16,7 @@ using Logging
 using LoggingExtras
 using MLUtils
 using Random
+using Roots
 using Statistics
 using StatsBase
 using TimerOutputs
@@ -41,7 +44,7 @@ export SVHN2, SVHN2Extra
 export Ember
 
 export CrossEntropy, ECM
-export PatMat, PatMatNP
+export PatMat, PatMatNP, DelayedPatMatNP, AdaptiveDelayedPatMatNP
 export TopPush, TopPushK, TopMeanK, TauFPL
 export Grill, GrillNP
 export DeepTopPush, DeepTopPushCross
@@ -157,6 +160,7 @@ include("optimisers.jl")
 include("logging.jl")
 include("configs.jl")
 include("train.jl")
+include("convergence.jl")
 
 function __init__()
     get!(ENV, "DATADEPS_LOAD_PATH", "/mnt/personal/machava2/datasets")
