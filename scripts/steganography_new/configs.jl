@@ -90,6 +90,11 @@ objectives = (
     PatMatNP(λ=0, τ=1e-3, surrogate="Softplus"),
     PatMatNP(λ=0, τ=1e-4, surrogate="Softplus"),
     PatMatNP(λ=0, τ=1e-5, surrogate="Softplus"),
+    DelayedPatMatNP(λ=0, τ=1e-3),
+    DelayedPatMatNP(λ=0, τ=1e-4),
+    DelayedPatMatNP(λ=0, τ=1e-5),
+    AdaptiveDelayedPatMatNP(λ=0, epochs = [20], τs = [1e-3], τ=1e-4),
+    AdaptiveDelayedPatMatNP(λ=0, epochs = [20, 40], τs = [1e-3, 1e-4], τ=1e-5),
     TauFPL(λ=0, τ=1e-3, surrogate="Softplus"),
     TauFPL(λ=0, τ=1e-4, surrogate="Softplus"),
     TauFPL(λ=0, τ=1e-5, surrogate="Softplus"),
@@ -110,8 +115,8 @@ optimisers = (
 # SGD
 datasets = (
     Nsf5Small(payload=0.2, ratio=1),
-    # Nsf5Small(payload=0.2, ratio=0.5),
-    # Nsf5Small(payload=0.2, ratio=0.1),
+    Nsf5Small(payload=0.2, ratio=0.5),
+    Nsf5Small(payload=0.2, ratio=0.1),
 )
 
 trains = (
@@ -143,8 +148,8 @@ optimisers = (
 # SGD
 datasets = (
     Nsf5Small(payload=0.2, ratio=1),
-    # Nsf5Small(payload=0.2, ratio=0.5),
-    # Nsf5Small(payload=0.2, ratio=0.1),
+    Nsf5Small(payload=0.2, ratio=0.5),
+    Nsf5Small(payload=0.2, ratio=0.1),
 )
 
 trains = (
@@ -166,4 +171,42 @@ trains = (
 for dataset in datasets
     dir = string("Nsf5SmallSGD/", string(typeof(dataset).name.name, "-", dataset.ratio))
     generate_configs(dir, (dataset,), (Linear(),), objectives, optimisers, trains)
+end
+
+
+#-------------------------------------------------------------------------------------------
+# JMiPODSmall
+#-------------------------------------------------------------------------------------------
+# optimisers
+optimisers = (
+    OptDescent(eta=1e-2, decay_every=5),
+)
+
+# SGD
+datasets = (
+    JMiPODSmall(payload=0.1, ratio=1),
+    JMiPODSmall(payload=0.1, ratio=0.5),
+    JMiPODSmall(payload=0.1, ratio=0.1),
+)
+
+trains = (
+    TrainConfig(;
+        seed=seed,
+        epoch_max=epoch_max,
+        checkpoint_every=5,
+        eval_all=true,
+        batch_neg=batch_size,
+        batch_pos=batch_size,
+        device="GPU",
+        save_dir=SAVE_DIR,
+        force=false,
+    )
+    for seed in 1:10
+    for batch_size in [128]
+    for epoch_max in [90]
+)
+
+for dataset in datasets
+    dir = string("JMiPODSmall/", string(typeof(dataset).name.name, "-", dataset.ratio))
+    generate_configs(dir, (dataset,), (EfficientNetB0(true),), objectives, optimisers, trains)
 end

@@ -83,6 +83,22 @@ objectives = (
     CrossEntropy(ϵ=0.9),
     CrossEntropy(ϵ=0.99),
     CrossEntropy(ϵ=0.999),
+    CrossEntropy(ϵ=0.1),
+    CrossEntropy(ϵ=0.01),
+    CrossEntropy(ϵ=0.001),
+    ECM(),
+    GrillNP(τ=1e-3, surrogate="Hinge"),
+    GrillNP(τ=1e-4, surrogate="Hinge"),
+    GrillNP(τ=1e-5, surrogate="Hinge"),
+    GrillNP(τ=0.999, surrogate="Hinge"),
+    GrillNP(τ=0.9999, surrogate="Hinge"),
+    GrillNP(τ=0.99999, surrogate="Hinge"),
+    TauFPL(τ=1e-3, surrogate="Hinge"),
+    TauFPL(τ=1e-4, surrogate="Hinge"),
+    TauFPL(τ=1e-5, surrogate="Hinge"),
+    MODE(fpr=1e-3),
+    MODE(fpr=1e-4),
+    MODE(fpr=1e-5),
 )
 
 #-------------------------------------------------------------------------------------------
@@ -103,12 +119,14 @@ datasets = (
 trains = (
     TrainConfig(;
         seed=seed,
-        epoch_max=1000,
+        epoch_max=epoch_max,
         checkpoint_every=50,
         device="CPU",
-        save_dir="steganography"
+        save_dir="steganography",
+        force=false,
     )
     for seed in 1:10
+    for epoch_max in [1000, 2000, 3000]
 )
 
 for dataset in datasets
@@ -134,14 +152,16 @@ datasets = (
 trains = (
     TrainConfig(;
         seed=seed,
-        epoch_max=1000,
+        epoch_max=epoch_max,
         checkpoint_every=50,
         batch_neg=batch_size,
         batch_pos=batch_size,
         device="CPU",
-        save_dir="steganography"
+        save_dir="steganography",
+        force=false,
     )
     for seed in 1:10
+    for epoch_max in [1000, 2000, 3000]
     for batch_size in [16, 32, 128]
 )
 
@@ -172,6 +192,7 @@ trains = (
         checkpoint_every=10,
         device="CPU",
         save_dir="steganography",
+        force=false,
     )
     for seed in 1:10
 )
@@ -199,16 +220,18 @@ datasets = (
 trains = (
     TrainConfig(;
         seed=seed,
-        epoch_max=30,
+        epoch_max=epoch_max,
         checkpoint_every=10,
         eval_all=true,
         batch_neg=batch_size,
         batch_pos=batch_size,
         device="GPU",
         save_dir="steganography",
+        force=true,
     )
     for seed in 1:10
     for batch_size in [16, 32, 128]
+    for epoch_max in [30, 60, 90]
 )
 
 for dataset in datasets
