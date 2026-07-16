@@ -7,7 +7,7 @@ struct SRNetType2
     convbn
 end
 
-Flux.@layer SRNetType2
+Flux.@functor SRNetType2
 (b::SRNetType2)(x) = b.convbn(b.type1(x)) .+ x
 
 # Type 3: downsampling residual block (may change channels)
@@ -18,12 +18,13 @@ struct SRNetType3
     shortcut_bn
     type1
     convbn
+    pool
 end
 
-Flux.@layer SRNetType3
+Flux.@functor SRNetType3
 function (b::SRNetType3)(x)
     shortcut = b.shortcut_bn(b.shortcut_conv(x))
-    main = MeanPool((3, 3); stride=2, pad=1)(b.convbn(b.type1(x)))
+    main = b.pool(b.convbn(b.type1(x)))
     return shortcut .+ main
 end
 
@@ -45,6 +46,7 @@ function srnet_type3(in_ch, out_ch)
         BatchNorm(out_ch),
         srnet_type1(in_ch, out_ch),
         srnet_convbn(out_ch, out_ch),
+        MeanPool((3, 3); stride=2, pad=1),
     )
 end
 
