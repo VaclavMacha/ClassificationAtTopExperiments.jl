@@ -415,5 +415,25 @@ $RECYCLE.BIN/
 *.lnk
 
 
+################################################################################
+#                                   Python                                     #
+################################################################################
+
+# Vendored reference implementation (populated by scripts_python/prepare.sh)
+scripts_python/vendor/
+
+# Poetry virtual environment
+scripts_python/.venv/
+
+# Downloaded checkpoint and generated HDF5 artefacts
+data/JIN_SRNet.pt
+data/pretrained/srnet.h5
+data/pretrained/srnet.h5.io.h5
+
+# Byte-compiled / optimised files
+__pycache__/
+*.py[cod]
+*.egg-info/
+
 ## Acknowledgements
 # Many thanks to `https://gitignore.io/`, written and maintained by Joe Blau, which contributed much material to this gitignore file.

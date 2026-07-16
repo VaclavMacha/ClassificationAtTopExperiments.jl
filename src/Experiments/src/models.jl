@@ -81,6 +81,25 @@ function materialize(::AbstractJMiPOD, ::MobileNetv3)
 end
 
 # ------------------------------------------------------------------------------------------
+# SRNet
+# ------------------------------------------------------------------------------------------
+@kwdef struct SRNet <: ModelType
+    pretrained::Bool = false
+    in_channels::Int = 3
+    n_out::Int = 2
+end
+
+parse_type(::Val{:SRNet}) = SRNet
+
+function materialize(::AbstractJMiPOD, m::SRNet)
+    net = build_srnet(; in_channels=m.in_channels, n_out=m.n_out)
+    if m.pretrained
+        load_srnet_weights!(net, pretraineddir("srnet.h5"))
+    end
+    return net
+end
+
+# ------------------------------------------------------------------------------------------
 # Custom conv
 # ------------------------------------------------------------------------------------------
 struct SimpleConv <: ModelType end

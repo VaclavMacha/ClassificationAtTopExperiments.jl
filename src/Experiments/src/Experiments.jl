@@ -57,6 +57,7 @@ export EfficientNetB0
 export GoogLeNet
 export MobileNetv3
 export SimpleConv
+export SRNet
 
 export OptDescent, OptADAM, OptRMSProp
 
@@ -155,6 +156,7 @@ free_memory!(x::CUDA.CuArray) = CUDA.unsafe_free!(x)
 include("loaders.jl")
 include("datasets.jl")
 include("losses.jl")
+include("srnet.jl")
 include("models.jl")
 include("optimisers.jl")
 include("logging.jl")
