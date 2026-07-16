@@ -87,6 +87,11 @@ function load_srnet_weights!(model, path::AbstractString)
         )
         for (p, k) in zip(ps, ks)
             w = read(f, k)
+            # Conv weights stored in PyTorch (out,in,H,W) order need to be
+            # transposed to Flux (H,W,in,out) order.
+            if ndims(w) == 4 && size(w) != size(p)
+                w = permutedims(w, (4, 3, 2, 1))
+            end
             size(p) == size(w) || error("Shape mismatch at key $k: model=$(size(p)), file=$(size(w))")
             copyto!(p, w)
         end
