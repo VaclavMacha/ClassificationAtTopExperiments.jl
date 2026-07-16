@@ -1,17 +1,21 @@
-[tool.poetry]
+[project]
 name = "srnet-tools"
 version = "0.1.0"
 description = "Python utilities for SRNet steganalysis experiments"
-authors = ["Václav Mácha <vaclav.macha@gendigital.com>"]
-package-mode = false
+authors = [
+    { name = "Václav Mácha", email = "vaclav.macha92@gmail.com" }
+]
+requires-python = ">=3.10"
+dependencies = [
+    "torch>=2.0",
+    "h5py>=3.0",
+    "numpy>=1.24",
+    "imageio>=2.31",
+]
 
-[tool.poetry.dependencies]
-python = "^3.10"
-torch = ">=2.0"
-h5py = ">=3.0"
-numpy = ">=1.24"
-imageio = ">=2.31"
+[tool.uv]
+package = false
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"

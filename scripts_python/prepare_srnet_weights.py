@@ -14,7 +14,7 @@ Setup:
     cd scripts_python && poetry install
 
 Usage:
-    poetry run python prepare_srnet_weights.py \\
+    uv run python prepare_srnet_weights.py \\
         --input  path/to/JIN_SRNet.pt \\
         --output ../data/pretrained/srnet.h5 \\
         [--images img1.png img2.png ...]
@@ -38,10 +38,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-
 # ---------------------------------------------------------------------------
 # Robust loader — stubs any missing class (checkpoint saved as full model)
 # ---------------------------------------------------------------------------
+
 
 class _Stub(nn.Module):
     def __setstate__(self, state: dict) -> None:
@@ -64,8 +64,9 @@ _robust_pickle.Unpickler = _RobustUnpickler  # type: ignore[attr-defined]
 
 
 def load_state_dict(path: str) -> dict:
-    ckpt = torch.load(path, map_location="cpu", weights_only=False,
-                      pickle_module=_robust_pickle)
+    ckpt = torch.load(
+        path, map_location="cpu", weights_only=False, pickle_module=_robust_pickle
+    )
     if isinstance(ckpt, dict) and "model_state_dict" in ckpt:
         return ckpt["model_state_dict"]
     if isinstance(ckpt, dict) and "state_dict" in ckpt:
@@ -79,6 +80,7 @@ def load_state_dict(path: str) -> dict:
 # Minimal PyTorch SRNet matching JIN checkpoint key names exactly.
 # Used only for the forward pass that generates reference I/O.
 # ---------------------------------------------------------------------------
+
 
 class _Layer1(nn.Module):
     def __init__(self, in_c: int, out_c: int) -> None:
@@ -122,7 +124,9 @@ class Block3Unit(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         shortcut = self.resnorm(self.resconv(x))
-        main = F.avg_pool2d(self.norm(self.conv(self.layer1(x))), 3, stride=2, padding=1)
+        main = F.avg_pool2d(
+            self.norm(self.conv(self.layer1(x))), 3, stride=2, padding=1
+        )
         return shortcut + main
 
 
@@ -143,8 +147,10 @@ class JINSRNet(nn.Module):
         self.block1 = nn.Sequential(Block1Unit(3, 64), Block1Unit(64, 16))
         self.block2 = nn.Sequential(*[Block2Unit(16) for _ in range(5)])
         self.block3 = nn.Sequential(
-            Block3Unit(16, 16), Block3Unit(16, 64),
-            Block3Unit(64, 128), Block3Unit(128, 256),
+            Block3Unit(16, 16),
+            Block3Unit(16, 64),
+            Block3Unit(64, 128),
+            Block3Unit(128, 256),
         )
         self.block4 = nn.Sequential(Block4Unit(256, 512))
         self.fc = nn.Linear(512, 2)
@@ -161,86 +167,86 @@ class JINSRNet(nn.Module):
 # fc.weight has the same (n_out, 512) layout in both frameworks — no permute.
 # ---------------------------------------------------------------------------
 WEIGHT_ORDER = (
-    ("block1.0.conv.weight",         True),
-    ("block1.0.norm.bias",           False),
-    ("block1.0.norm.weight",         False),
-    ("block1.1.conv.weight",         True),
-    ("block1.1.norm.bias",           False),
-    ("block1.1.norm.weight",         False),
-    ("block2.0.layer1.conv.weight",  True),
-    ("block2.0.layer1.norm.bias",    False),
-    ("block2.0.layer1.norm.weight",  False),
-    ("block2.0.conv.weight",         True),
-    ("block2.0.norm.bias",           False),
-    ("block2.0.norm.weight",         False),
-    ("block2.1.layer1.conv.weight",  True),
-    ("block2.1.layer1.norm.bias",    False),
-    ("block2.1.layer1.norm.weight",  False),
-    ("block2.1.conv.weight",         True),
-    ("block2.1.norm.bias",           False),
-    ("block2.1.norm.weight",         False),
-    ("block2.2.layer1.conv.weight",  True),
-    ("block2.2.layer1.norm.bias",    False),
-    ("block2.2.layer1.norm.weight",  False),
-    ("block2.2.conv.weight",         True),
-    ("block2.2.norm.bias",           False),
-    ("block2.2.norm.weight",         False),
-    ("block2.3.layer1.conv.weight",  True),
-    ("block2.3.layer1.norm.bias",    False),
-    ("block2.3.layer1.norm.weight",  False),
-    ("block2.3.conv.weight",         True),
-    ("block2.3.norm.bias",           False),
-    ("block2.3.norm.weight",         False),
-    ("block2.4.layer1.conv.weight",  True),
-    ("block2.4.layer1.norm.bias",    False),
-    ("block2.4.layer1.norm.weight",  False),
-    ("block2.4.conv.weight",         True),
-    ("block2.4.norm.bias",           False),
-    ("block2.4.norm.weight",         False),
-    ("block3.0.resconv.weight",      True),
-    ("block3.0.resnorm.bias",        False),
-    ("block3.0.resnorm.weight",      False),
-    ("block3.0.layer1.conv.weight",  True),
-    ("block3.0.layer1.norm.bias",    False),
-    ("block3.0.layer1.norm.weight",  False),
-    ("block3.0.conv.weight",         True),
-    ("block3.0.norm.bias",           False),
-    ("block3.0.norm.weight",         False),
-    ("block3.1.resconv.weight",      True),
-    ("block3.1.resnorm.bias",        False),
-    ("block3.1.resnorm.weight",      False),
-    ("block3.1.layer1.conv.weight",  True),
-    ("block3.1.layer1.norm.bias",    False),
-    ("block3.1.layer1.norm.weight",  False),
-    ("block3.1.conv.weight",         True),
-    ("block3.1.norm.bias",           False),
-    ("block3.1.norm.weight",         False),
-    ("block3.2.resconv.weight",      True),
-    ("block3.2.resnorm.bias",        False),
-    ("block3.2.resnorm.weight",      False),
-    ("block3.2.layer1.conv.weight",  True),
-    ("block3.2.layer1.norm.bias",    False),
-    ("block3.2.layer1.norm.weight",  False),
-    ("block3.2.conv.weight",         True),
-    ("block3.2.norm.bias",           False),
-    ("block3.2.norm.weight",         False),
-    ("block3.3.resconv.weight",      True),
-    ("block3.3.resnorm.bias",        False),
-    ("block3.3.resnorm.weight",      False),
-    ("block3.3.layer1.conv.weight",  True),
-    ("block3.3.layer1.norm.bias",    False),
-    ("block3.3.layer1.norm.weight",  False),
-    ("block3.3.conv.weight",         True),
-    ("block3.3.norm.bias",           False),
-    ("block3.3.norm.weight",         False),
-    ("block4.0.layer1.conv.weight",  True),
-    ("block4.0.layer1.norm.bias",    False),
-    ("block4.0.layer1.norm.weight",  False),
-    ("block4.0.conv.weight",         True),
-    ("block4.0.norm.bias",           False),
-    ("block4.0.norm.weight",         False),
-    ("fc.weight",                    False),
-    ("fc.bias",                      False),
+    ("block1.0.conv.weight", True),
+    ("block1.0.norm.bias", False),
+    ("block1.0.norm.weight", False),
+    ("block1.1.conv.weight", True),
+    ("block1.1.norm.bias", False),
+    ("block1.1.norm.weight", False),
+    ("block2.0.layer1.conv.weight", True),
+    ("block2.0.layer1.norm.bias", False),
+    ("block2.0.layer1.norm.weight", False),
+    ("block2.0.conv.weight", True),
+    ("block2.0.norm.bias", False),
+    ("block2.0.norm.weight", False),
+    ("block2.1.layer1.conv.weight", True),
+    ("block2.1.layer1.norm.bias", False),
+    ("block2.1.layer1.norm.weight", False),
+    ("block2.1.conv.weight", True),
+    ("block2.1.norm.bias", False),
+    ("block2.1.norm.weight", False),
+    ("block2.2.layer1.conv.weight", True),
+    ("block2.2.layer1.norm.bias", False),
+    ("block2.2.layer1.norm.weight", False),
+    ("block2.2.conv.weight", True),
+    ("block2.2.norm.bias", False),
+    ("block2.2.norm.weight", False),
+    ("block2.3.layer1.conv.weight", True),
+    ("block2.3.layer1.norm.bias", False),
+    ("block2.3.layer1.norm.weight", False),
+    ("block2.3.conv.weight", True),
+    ("block2.3.norm.bias", False),
+    ("block2.3.norm.weight", False),
+    ("block2.4.layer1.conv.weight", True),
+    ("block2.4.layer1.norm.bias", False),
+    ("block2.4.layer1.norm.weight", False),
+    ("block2.4.conv.weight", True),
+    ("block2.4.norm.bias", False),
+    ("block2.4.norm.weight", False),
+    ("block3.0.resconv.weight", True),
+    ("block3.0.resnorm.bias", False),
+    ("block3.0.resnorm.weight", False),
+    ("block3.0.layer1.conv.weight", True),
+    ("block3.0.layer1.norm.bias", False),
+    ("block3.0.layer1.norm.weight", False),
+    ("block3.0.conv.weight", True),
+    ("block3.0.norm.bias", False),
+    ("block3.0.norm.weight", False),
+    ("block3.1.resconv.weight", True),
+    ("block3.1.resnorm.bias", False),
+    ("block3.1.resnorm.weight", False),
+    ("block3.1.layer1.conv.weight", True),
+    ("block3.1.layer1.norm.bias", False),
+    ("block3.1.layer1.norm.weight", False),
+    ("block3.1.conv.weight", True),
+    ("block3.1.norm.bias", False),
+    ("block3.1.norm.weight", False),
+    ("block3.2.resconv.weight", True),
+    ("block3.2.resnorm.bias", False),
+    ("block3.2.resnorm.weight", False),
+    ("block3.2.layer1.conv.weight", True),
+    ("block3.2.layer1.norm.bias", False),
+    ("block3.2.layer1.norm.weight", False),
+    ("block3.2.conv.weight", True),
+    ("block3.2.norm.bias", False),
+    ("block3.2.norm.weight", False),
+    ("block3.3.resconv.weight", True),
+    ("block3.3.resnorm.bias", False),
+    ("block3.3.resnorm.weight", False),
+    ("block3.3.layer1.conv.weight", True),
+    ("block3.3.layer1.norm.bias", False),
+    ("block3.3.layer1.norm.weight", False),
+    ("block3.3.conv.weight", True),
+    ("block3.3.norm.bias", False),
+    ("block3.3.norm.weight", False),
+    ("block4.0.layer1.conv.weight", True),
+    ("block4.0.layer1.norm.bias", False),
+    ("block4.0.layer1.norm.weight", False),
+    ("block4.0.conv.weight", True),
+    ("block4.0.norm.bias", False),
+    ("block4.0.norm.weight", False),
+    ("fc.weight", False),
+    ("fc.bias", False),
 )
 
 
@@ -252,7 +258,9 @@ def convert(input_path: str, output_path: str, image_paths: list[str]) -> None:
         print("ERROR: missing keys in checkpoint:")
         for k in missing:
             print(f"  {k}")
-        import sys; sys.exit(1)
+        import sys
+
+        sys.exit(1)
 
     os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
     param_keys = {k for k, _ in WEIGHT_ORDER}
@@ -271,10 +279,11 @@ def convert(input_path: str, output_path: str, image_paths: list[str]) -> None:
     model = JINSRNet()
     filtered_sd = {k: v for k, v in state_dict.items() if k in param_keys}
     model.load_state_dict(filtered_sd, strict=False)
-    model.train()   # train mode: batch stats, so Julia (also train mode) matches
+    model.train()  # train mode: batch stats, so Julia (also train mode) matches
 
     if image_paths:
         import imageio
+
         frames = []
         for p in image_paths:
             img = imageio.imread(p)
@@ -295,25 +304,29 @@ def convert(input_path: str, output_path: str, image_paths: list[str]) -> None:
         y = model(x)
 
     io_path = output_path + ".io.h5"
-    x_flux = np.transpose(x.numpy(), (2, 3, 1, 0))   # (H,W,C,N)
-    y_flux = y.numpy().T                               # (n_out,N)
+    x_flux = np.transpose(x.numpy(), (2, 3, 1, 0))  # (H,W,C,N)
+    y_flux = y.numpy().T  # (n_out,N)
 
     with h5py.File(io_path, "w") as f:
-        f.create_dataset("input",  data=x_flux)
+        f.create_dataset("input", data=x_flux)
         f.create_dataset("output", data=y_flux)
 
     print(f"Reference logits:\n{y.numpy()}")
     print(f"Saved reference I/O → {io_path}")
-    print(f"\nVerify with Julia:\n  julia scripts/test_srnet.jl")
+    print("\nVerify with Julia:\n  julia scripts/test_srnet.jl")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Export JIN SRNet weights to HDF5 and generate Julia parity reference."
     )
-    parser.add_argument("--input",  required=True, help="Path to JIN_SRNet.pt")
+    parser.add_argument("--input", required=True, help="Path to JIN_SRNet.pt")
     parser.add_argument("--output", required=True, help="Destination .h5 file")
-    parser.add_argument("--images", nargs="+", default=[],
-                        help="Optional RGB images for reference I/O (PNG/JPEG)")
+    parser.add_argument(
+        "--images",
+        nargs="+",
+        default=[],
+        help="Optional RGB images for reference I/O (PNG/JPEG)",
+    )
     args = parser.parse_args()
     convert(args.input, args.output, args.images)

@@ -4,7 +4,7 @@
 #
 # Run the Python script first:
 #   cd scripts_python
-#   poetry run python prepare_srnet_weights.py \
+#   uv run python prepare_srnet_weights.py \
 #       --input path/to/JIN_SRNet.pt \
 #       --output ../data/pretrained/srnet.h5
 #
@@ -44,7 +44,7 @@ for p in (weights_path, io_path)
 File not found: $p
 Run first:
   cd scripts_python
-  poetry run python prepare_srnet_weights.py \\
+  uv run python prepare_srnet_weights.py \\
       --input path/to/JIN_SRNet.pt \\
       --output $weights_path
 """)

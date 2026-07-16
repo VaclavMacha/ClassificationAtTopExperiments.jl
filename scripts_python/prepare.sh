@@ -8,7 +8,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DATA_DIR="$SCRIPT_DIR/../data"
+DATA_DIR="$SCRIPT_DIR/data"
 PRETRAINED_DIR="$DATA_DIR/pretrained"
 VENDOR_DIR="$SCRIPT_DIR/vendor/srnet"
 SRNET_REPO="https://github.com/brijeshiitg/Pytorch-implementation-of-SRNet"
@@ -27,6 +27,7 @@ else
     curl -L --progress-bar "$WEIGHTS_URL" -o "$WEIGHTS_ZIP"
     echo "      Unzipping..."
     unzip -q "$WEIGHTS_ZIP" -d "$DATA_DIR"
+    mv "$DATA_DIR/epoch=56_val_wAUC=0.8921.pt" "$WEIGHTS_PT"
     rm "$WEIGHTS_ZIP"
     if [ ! -f "$WEIGHTS_PT" ]; then
         # zip may place the .pt inside a subdirectory — find and move it
@@ -54,11 +55,11 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 3. Install Python dependencies via Poetry
+# 3. Install Python dependencies via uv
 # ---------------------------------------------------------------------------
-echo "[3/3] Installing Python dependencies via Poetry..."
+echo "[3/3] Installing Python dependencies via UV..."
 cd "$SCRIPT_DIR"
-poetry install
+uv sync
 
 echo ""
 echo "Setup complete."
@@ -66,7 +67,7 @@ echo ""
 echo "Next steps:"
 echo "  1. Export weights and generate parity reference:"
 echo "       cd scripts_python"
-echo "       poetry run python prepare_srnet_weights.py \\"
+echo "       uv run python prepare_srnet_weights.py \\"
 echo "           --input  $WEIGHTS_PT \\"
 echo "           --output $PRETRAINED_DIR/srnet.h5"
 echo "  2. Verify Julia implementation:"

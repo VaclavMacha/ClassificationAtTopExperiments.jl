@@ -29,7 +29,7 @@ This will:
 
 ```bash
 cd scripts_python
-poetry run python prepare_srnet_weights.py \
+uv run python prepare_srnet_weights.py \
     --input  ../data/JIN_SRNet.pt \
     --output ../data/pretrained/srnet.h5
 ```
@@ -76,3 +76,9 @@ scripts_python/
     └── srnet/                  # cloned brijeshiitg/Pytorch-implementation-of-SRNet
                                 # (git-ignored, populated by prepare.sh)
 ```
+
+
+cd scripts_python
+uv run python prepare_srnet_weights.py \
+    --input  /home/machava2/projects/ClassificationAtTopExperiments.jl/scripts_python/data/JIN_SRNet.pt \
+    --output /home/machava2/projects/ClassificationAtTopExperiments.jl/scripts_python/data/pretrained/srnet.h5
