@@ -17,14 +17,13 @@
 using DrWatson
 @quickactivate("ClassificationAtTopExperiments.jl")
 
+using Experiments: build_srnet, load_srnet_weights!
 using Experiments.Flux
 using Experiments.HDF5
 using Statistics: mean
 
-include(srcdir("Experiments", "src", "srnet.jl"))
-
 function parse_args()
-    weights_path = pretraineddir("srnet.h5")
+    weights_path = projectdir("scripts_python", "data", "pretrained", "srnet.h5")
     i = 1
     while i <= length(ARGS)
         if ARGS[i] == "--weights" && i + 1 <= length(ARGS)
