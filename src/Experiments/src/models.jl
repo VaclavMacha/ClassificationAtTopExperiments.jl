@@ -86,17 +86,26 @@ end
 @kwdef struct SRNet <: ModelType
     pretrained::Bool = false
     in_channels::Int = 3
-    n_out::Int = 2
+    n_out::Int = 1
 end
 
 parse_type(::Val{:SRNet}) = SRNet
 
 function materialize(::AbstractJMiPOD, m::SRNet)
-    net = build_srnet(; in_channels=m.in_channels, n_out=m.n_out)
     if m.pretrained
+        # The pretrained checkpoint has a 2-logit head (cover, stego).
+        net = build_srnet(; in_channels=m.in_channels, n_out=2)
         load_srnet_weights!(net, pretraineddir("srnet.h5"))
+        m.n_out == 2 && return net
+        m.n_out == 1 || error("SRNet: pretrained head has 2 outputs; n_out must be 1 or 2")
+        # Collapse to a single score s = logit(stego) - logit(cover) — the
+        # same decision function, compatible with the binary framework.
+        fc = net.layers[end]
+        head = Dense(fc.weight[2:2, :] .- fc.weight[1:1, :], fc.bias[2:2] .- fc.bias[1:1])
+        return Chain(net.layers[1:end-1]..., head)
+    else
+        return build_srnet(; in_channels=m.in_channels, n_out=m.n_out)
     end
-    return net
 end
 
 # ------------------------------------------------------------------------------------------

@@ -263,7 +263,14 @@ def convert(input_path: str, output_path: str, image_paths: list[str]) -> None:
         sys.exit(1)
 
     os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
-    param_keys = {k for k, _ in WEIGHT_ORDER}
+
+    # BatchNorm prefixes in WEIGHT_ORDER order — matches the depth-first
+    # Flux.modules traversal used by load_srnet_weights! to fill μ/σ².
+    bn_prefixes = [
+        key[: -len(".bias")]
+        for key, conv_permute in WEIGHT_ORDER
+        if not conv_permute and key.endswith(".bias") and key != "fc.bias"
+    ]
 
     # Export weights
     with h5py.File(output_path, "w") as f:
@@ -273,13 +280,18 @@ def convert(input_path: str, output_path: str, image_paths: list[str]) -> None:
                 arr = np.transpose(arr, (3, 2, 1, 0))
             f.create_dataset(f"{idx:04d}", data=arr)
             print(f"  [{idx:04d}] {key:55s}  {arr.shape}")
+        for idx, prefix in enumerate(bn_prefixes):
+            mean = state_dict[f"{prefix}.running_mean"].numpy().astype(np.float32)
+            var = state_dict[f"{prefix}.running_var"].numpy().astype(np.float32)
+            f.create_dataset(f"running_mean/{idx:04d}", data=mean)
+            f.create_dataset(f"running_var/{idx:04d}", data=var)
     print(f"\nSaved {len(WEIGHT_ORDER)} tensors (backbone + fc) → {output_path}")
+    print(f"Saved running mean/var for {len(bn_prefixes)} BatchNorm layers")
 
     # Build model and load weights for reference I/O generation
     model = JINSRNet()
-    filtered_sd = {k: v for k, v in state_dict.items() if k in param_keys}
-    model.load_state_dict(filtered_sd, strict=False)
-    model.train()  # train mode: batch stats, so Julia (also train mode) matches
+    model.load_state_dict(state_dict, strict=False)
+    model.eval()  # eval mode: running stats, so Julia (testmode!) matches
 
     if image_paths:
         import imageio

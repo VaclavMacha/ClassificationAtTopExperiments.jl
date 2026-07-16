@@ -11,8 +11,8 @@
 # Then:
 #   julia scripts/test_srnet.jl [--weights path]
 #
-# Both models run in TRAIN mode so BatchNorm uses batch statistics, avoiding
-# the need to synchronise running mean/var from the checkpoint.
+# Both models run in EVAL mode: BatchNorm running statistics are exported to
+# the HDF5 file and loaded into the Julia model by load_srnet_weights!.
 
 using DrWatson
 @quickactivate("ClassificationAtTopExperiments.jl")
@@ -52,13 +52,18 @@ end
 
 println("Building Julia SRNet (in_channels=3, n_out=2)...")
 model = build_srnet(; in_channels=3, n_out=2)
-# Stay in train mode (default) so BatchNorm uses batch stats, matching Python.
+# Test mode: BatchNorm uses the running stats loaded from the checkpoint,
+# matching the Python reference generated with model.eval().
+Flux.testmode!(model)
 
 println("Loading weights from: $weights_path")
 load_srnet_weights!(model, weights_path)
 
 x_ref, y_ref = h5open(io_path, "r") do f
-    Float32.(read(f, "input")), Float32.(read(f, "output"))
+    x = Float32.(read(f, "input"))
+    y = Float32.(read(f, "output"))
+    # HDF5.jl reads numpy (row-major) arrays with reversed dims; undo that.
+    permutedims(x, ndims(x):-1:1), permutedims(y, ndims(y):-1:1)
 end
 println("Input  shape (H,W,C,N): $(size(x_ref))")
 println("Output shape (n_out,N): $(size(y_ref))  [Python reference]")
